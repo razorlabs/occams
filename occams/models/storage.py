@@ -13,8 +13,9 @@ from sqlalchemy import (
     Column,
     CheckConstraint,
     ForeignKey, ForeignKeyConstraint, Index, UniqueConstraint,
-    Date, DateTime, Boolean, LargeBinary, Numeric, Integer,
-    Unicode, UnicodeText, String)
+    Date, DateTime, Boolean, Numeric, Integer,
+    Unicode, UnicodeText, String
+)
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.orm.collections import collection
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -22,9 +23,9 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from ..exc import ConstraintError, InvalidEntitySchemaError
-from . import DataStoreModel
 from .auditing import Auditable
 from .metadata import Referenceable, Describeable, Modifiable, User
+from .meta import Base
 from .schema import Schema, Attribute, Choice
 
 
@@ -36,7 +37,7 @@ def enforceSchemaState(entity):
         raise InvalidEntitySchemaError(entity.schema.name)
 
 
-class Context(DataStoreModel, Referenceable, Modifiable, Auditable):
+class Context(Base, Referenceable, Modifiable, Auditable):
 
     __tablename__ = 'context'
 
@@ -97,7 +98,7 @@ def grouped_collection(keyfunc):
     return lambda: GroupedCollection(keyfunc)
 
 
-class State(DataStoreModel, Referenceable, Describeable, Modifiable, Auditable):
+class State(Base, Referenceable, Describeable, Modifiable, Auditable):
     """
     An entity state to keep track of the entity's progress through some
     externally defined work flow.
@@ -149,7 +150,7 @@ def populate_default_states(target, connection, **kw):
     ]))
 
 
-class Entity(DataStoreModel, Referenceable, Modifiable, Auditable):
+class Entity(Base, Referenceable, Modifiable, Auditable):
     """
     An object that describes how an EAV object is generated.
     """
@@ -381,7 +382,7 @@ def TypeMappingClass(typeName, className, tableName, valueType, index=True):
         def _value(cls):
             return Column('value', cls.__valuetype__)
 
-    class_ = type(className, (DataStoreModel, _ValueBaseMixin), dict(
+    class_ = type(className, (Base, _ValueBaseMixin), dict(
         __tablename__=tableName,
         __valuetype__=valueType,
         __typename__=typeName))

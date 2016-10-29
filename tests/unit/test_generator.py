@@ -52,40 +52,40 @@ class TestOurNumberPatern:
 
 class TestGenerator:
 
-    def test_auto_create_site(self, db_session):
+    def test_auto_create_site(self, dbsession):
         """
         It should create an unregisterd site when generating an OUR number
         """
         from occams_roster import generate, models, OUR_PATTERN
-        res = generate(db_session, u'AEH')
+        res = generate(dbsession, u'AEH')
         assert OUR_PATTERN.match(res)
-        assert 1 == db_session.query(models.Site).count()
+        assert 1 == dbsession.query(models.Site).count()
 
-    def test_existing_site(self, db_session):
+    def test_existing_site(self, dbsession):
         """
         It should re-use previously registered sites
         """
         from occams_roster import generate, models, OUR_PATTERN
-        db_session.add(models.Site(title=u'AEH'))
-        db_session.flush()
+        dbsession.add(models.Site(title=u'AEH'))
+        dbsession.flush()
 
-        res = generate(db_session, u'AEH')
+        res = generate(dbsession, u'AEH')
         assert OUR_PATTERN.match(res)
-        assert 1 == db_session.query(models.Site).count()
+        assert 1 == dbsession.query(models.Site).count()
 
-    def test_issues_only_valid_our_numbers(self, db_session):
+    def test_issues_only_valid_our_numbers(self, dbsession):
         """
         It should only generate valid OUR numbers
         """
         from occams_roster import generate, models, OUR_PATTERN
         # eventually it will create an invalid one and mark is as invactive
         for i in range(100):
-            generate(db_session, u'AEH')
+            generate(dbsession, u'AEH')
         invalids_query = (
-            db_session.query(models.Identifier)
+            dbsession.query(models.Identifier)
             .filter_by(is_active=False))
         valids_query = (
-            db_session.query(models.Identifier)
+            dbsession.query(models.Identifier)
             .filter_by(is_active=True))
         assert invalids_query.count() >= 1
         for record in invalids_query:

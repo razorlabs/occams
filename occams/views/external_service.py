@@ -7,9 +7,8 @@ from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import wtforms
 
-from occams.utils.forms import wtferrors, Form
-
 from .. import _, models
+from ..utils.forms import wtferrors, Form
 
 
 @view_config(
@@ -38,11 +37,11 @@ def list_(context, request):
     """
     Returns a listing of external service JSON records for the study
     """
-    db_session = request.db_session
+    dbsession = request.dbsession
     study = context.__parent__
 
     query = (
-        db_session.query(models.ExternalService)
+        dbsession.query(models.ExternalService)
         .filter_by(study=study)
         .order_by(models.ExternalService.title)
     )
@@ -91,11 +90,11 @@ def delete_json(context, request):
     redirect to the listing.
     """
     check_csrf_token(request)
-    db_session = request.db_session
+    dbsession = request.dbsession
     study = context.study
     service = context
-    db_session.delete(service)
-    db_session.flush()
+    dbsession.delete(service)
+    dbsession.flush()
 
     success_url = request.route_path(
         'studies.external_services',
@@ -128,7 +127,7 @@ def edit_json(context, request):
     be returned.
     """
     check_csrf_token(request)
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     form = ExternalServiceForm(context, request).from_json(request.json_body)
 
@@ -146,7 +145,7 @@ def edit_json(context, request):
     service.title = form.title.data
     service.description = form.description.data
     service.url_template = form.url_template.data
-    db_session.flush()
+    dbsession.flush()
 
     success_url = request.route_path(
         'studies.external_service',
@@ -180,16 +179,16 @@ def render_url(url_template, raise_=True, fallback=None, **kw):
 
 
 def ExternalServiceForm(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     def check_unique(form, field):
         query = (
-            db_session.query(models.ExternalService)
+            dbsession.query(models.ExternalService)
             .filter_by(name=slugify(field.data))
         )
         if isinstance(context, models.ExternalService):
             query = query.filter(models.ExternalService.id != context.id)
-        (exists,) = db_session.query(query.exists()).one()
+        (exists,) = dbsession.query(query.exists()).one()
         if exists:
             raise wtforms.ValidationError(request.localizer.translate(_(
                 u'Another external service with this name exists.')))

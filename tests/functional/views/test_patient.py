@@ -7,36 +7,36 @@ class TestPermissionsPatientList:
     url = '/studies/patients'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, db_session):
+    def populate(self, app, dbsession):
         from datetime import date
 
         import transaction
-        from occams_studies import models as studies
+        from occams import models as studies
         from occams_datastore import models as datastore
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            db_session.info['blame'] = user
-            db_session.add(user)
-            db_session.flush()
-            db_session.add(studies.Site(
+            dbsession.info['blame'] = user
+            dbsession.add(user)
+            dbsession.flush()
+            dbsession.add(studies.Site(
                 name=u'UCSD',
                 title=u'UCSD',
                 description=u'UCSD Campus',
                 create_date=date.today()))
-            db_session.flush()
+            dbsession.flush()
 
     @pytest.mark.parametrize('group', [
         'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer',
         'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member'])
-    def test_allowed(self, app, db_session, group):
+    def test_allowed(self, app, dbsession, group):
         environ = make_environ(userid=USERID, groups=[group])
         res = app.get(self.url, extra_environ=environ)
         assert 200 == res.status_code
 
-    def test_not_authenticated(self, app, db_session):
+    def test_not_authenticated(self, app, dbsession):
         app.get(self.url, status=401)
 
 
@@ -45,9 +45,9 @@ class TestPermissionsPatientAdd:
     url = '/studies/patients'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, db_session):
+    def populate(self, app, dbsession):
         import transaction
-        from occams_studies import models as studies
+        from occams import models as studies
         from occams_datastore import models as datastore
         from datetime import date
 
@@ -55,25 +55,25 @@ class TestPermissionsPatientAdd:
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            db_session.info['blame'] = user
-            db_session.add(user)
-            db_session.flush()
-            db_session.add(studies.Site(
+            dbsession.info['blame'] = user
+            dbsession.add(user)
+            dbsession.flush()
+            dbsession.add(studies.Site(
                 name=u'UCSD',
                 title=u'UCSD',
                 description=u'UCSD Campus',
                 create_date=date.today()))
-            db_session.flush()
+            dbsession.flush()
 
     @pytest.mark.parametrize('group', [
         'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer'])
-    def test_allowed(self, app, db_session, group):
-        from occams_studies import models as studies
+    def test_allowed(self, app, dbsession, group):
+        from occams import models as studies
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
 
-        site = db_session.query(studies.Site).filter(
+        site = dbsession.query(studies.Site).filter(
             studies.Site.name == u'UCSD').one()
         site_id = site.id
 
@@ -96,13 +96,13 @@ class TestPermissionsPatientAdd:
     @pytest.mark.parametrize('group', [
         'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
         'UCLA:coordinator', 'UCLA:enterer', None])
-    def test_not_allowed(self, app, db_session, group):
-        from occams_studies import models as studies
+    def test_not_allowed(self, app, dbsession, group):
+        from occams import models as studies
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
 
-        site = db_session.query(studies.Site).filter(
+        site = dbsession.query(studies.Site).filter(
             studies.Site.name == u'UCSD').one()
         site_id = site.id
 
@@ -123,7 +123,7 @@ class TestPermissionsPatientAdd:
 
         assert 403 == res.status_code
 
-    def test_not_authenticated(self, app, db_session):
+    def test_not_authenticated(self, app, dbsession):
         app.post(self.url, status=401)
 
 
@@ -132,9 +132,9 @@ class TestPermissionsPatientView:
     url = '/studies/patients/{}'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, db_session):
+    def populate(self, app, dbsession):
         import transaction
-        from occams_studies import models as studies
+        from occams import models as studies
         from occams_datastore import models as datastore
         from datetime import date
 
@@ -142,16 +142,16 @@ class TestPermissionsPatientView:
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            db_session.info['blame'] = user
-            db_session.add(user)
-            db_session.flush()
+            dbsession.info['blame'] = user
+            dbsession.add(user)
+            dbsession.flush()
             site = studies.Site(
                 name=u'UCSD',
                 title=u'UCSD',
                 description=u'UCSD Campus',
                 create_date=date.today())
 
-            db_session.add(studies.Patient(
+            dbsession.add(studies.Patient(
                 initials=u'ian',
                 nurse=u'imanurse@ucsd.edu',
                 site=site,
@@ -161,7 +161,7 @@ class TestPermissionsPatientView:
     @pytest.mark.parametrize('group', [
         'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer',
         'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member'])
-    def test_allowed(self, app, db_session, group):
+    def test_allowed(self, app, dbsession, group):
         environ = make_environ(userid=USERID, groups=[group])
         res = app.get(
             self.url.format('123'), extra_environ=environ, status='*')
@@ -171,14 +171,14 @@ class TestPermissionsPatientView:
     @pytest.mark.parametrize('group', [
         'UCLA:coordinator', 'UCLA:enterer', 'UCLA:reviewer',
         'UCLA:consumer', 'UCLA:member'])
-    def test_not_allowed(self, app, db_session, group):
+    def test_not_allowed(self, app, dbsession, group):
         environ = make_environ(userid=USERID, groups=[group])
         res = app.get(
             self.url.format('123'), extra_environ=environ, status='*')
 
         assert 403 == res.status_code
 
-    def test_not_authenticated(self, app, db_session):
+    def test_not_authenticated(self, app, dbsession):
         app.get(self.url.format('123'), status=401)
 
 
@@ -187,9 +187,9 @@ class TestPermissionsPatientDelete:
     url = '/studies/patients/{}'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, db_session):
+    def populate(self, app, dbsession):
         import transaction
-        from occams_studies import models as studies
+        from occams import models as studies
         from occams_datastore import models as datastore
         from datetime import date
 
@@ -197,16 +197,16 @@ class TestPermissionsPatientDelete:
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            db_session.info['blame'] = user
-            db_session.add(user)
-            db_session.flush()
+            dbsession.info['blame'] = user
+            dbsession.add(user)
+            dbsession.flush()
             site = studies.Site(
                 name=u'UCSD',
                 title=u'UCSD',
                 description=u'UCSD Campus',
                 create_date=date.today())
 
-            db_session.add(studies.Patient(
+            dbsession.add(studies.Patient(
                 initials=u'ian',
                 nurse=u'imanurse@ucsd.edu',
                 site=site,
@@ -215,13 +215,13 @@ class TestPermissionsPatientDelete:
 
     @pytest.mark.parametrize('group', [
         'administrator', 'manager', 'UCSD:coordinator'])
-    def test_allowed(self, app, db_session, group):
-        from occams_studies import models as studies
+    def test_allowed(self, app, dbsession, group):
+        from occams import models as studies
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
 
-        patient = db_session.query(studies.Patient).filter(
+        patient = dbsession.query(studies.Patient).filter(
             studies.Patient.pid == u'123').one()
 
         data = {
@@ -246,13 +246,13 @@ class TestPermissionsPatientDelete:
     @pytest.mark.parametrize('group', [
         'UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer',
         'UCSD:member', 'UCLA:coorindator', None])
-    def test_not_allowed(self, app, db_session, group):
-        from occams_studies import models as studies
+    def test_not_allowed(self, app, dbsession, group):
+        from occams import models as studies
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
 
-        patient = db_session.query(studies.Patient).filter(
+        patient = dbsession.query(studies.Patient).filter(
             studies.Patient.pid == u'123').one()
         data = {
             'initials': patient.initials,
@@ -273,7 +273,7 @@ class TestPermissionsPatientDelete:
 
         assert 403 == res.status_code
 
-    def test_not_authenticated(self, app, db_session):
+    def test_not_authenticated(self, app, dbsession):
         app.delete(self.url.format('123'), status=401, xhr=True)
 
 
@@ -282,9 +282,9 @@ class TestPermissionsPatientEdit:
     url = '/studies/patients/{}'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, db_session):
+    def populate(self, app, dbsession):
         import transaction
-        from occams_studies import models as studies
+        from occams import models as studies
         from occams_datastore import models as datastore
         from datetime import date
 
@@ -292,16 +292,16 @@ class TestPermissionsPatientEdit:
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            db_session.info['blame'] = user
-            db_session.add(user)
-            db_session.flush()
+            dbsession.info['blame'] = user
+            dbsession.add(user)
+            dbsession.flush()
             site = studies.Site(
                 name=u'UCSD',
                 title=u'UCSD',
                 description=u'UCSD Campus',
                 create_date=date.today())
 
-            db_session.add(studies.Patient(
+            dbsession.add(studies.Patient(
                 initials=u'ian',
                 nurse=u'imanurse@ucsd.edu',
                 site=site,
@@ -310,13 +310,13 @@ class TestPermissionsPatientEdit:
 
     @pytest.mark.parametrize('group', [
         'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer'])
-    def test_allowed(self, app, db_session, group):
-        from occams_studies import models as studies
+    def test_allowed(self, app, dbsession, group):
+        from occams import models as studies
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
 
-        patient = db_session.query(studies.Patient).filter(
+        patient = dbsession.query(studies.Patient).filter(
             studies.Patient.pid == u'123').one()
         data = {
             'initials': patient.initials,
@@ -341,13 +341,13 @@ class TestPermissionsPatientEdit:
     @pytest.mark.parametrize('group', [
         'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
         'UCLA:coorindator', 'UCLA:enterer', None])
-    def test_not_allowed(self, app, db_session, group):
-        from occams_studies import models as studies
+    def test_not_allowed(self, app, dbsession, group):
+        from occams import models as studies
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
 
-        patient = db_session.query(studies.Patient).filter(
+        patient = dbsession.query(studies.Patient).filter(
             studies.Patient.pid == u'123').one()
         data = {
             'initials': patient.initials,
@@ -369,7 +369,7 @@ class TestPermissionsPatientEdit:
 
         assert 403 == res.status_code
 
-    def test_not_authenticated(self, app, db_session):
+    def test_not_authenticated(self, app, dbsession):
         app.put(self.url.format('123'), status=401, xhr=True)
 
 
@@ -378,9 +378,9 @@ class TestPermissionsPatientViewDiffSite:
     url = '/studies/patients/123'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, db_session):
+    def populate(self, app, dbsession):
         import transaction
-        from occams_studies import models as studies
+        from occams import models as studies
         from occams_datastore import models as datastore
         from datetime import date
 
@@ -388,32 +388,32 @@ class TestPermissionsPatientViewDiffSite:
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            db_session.info['blame'] = user
-            db_session.add(user)
-            db_session.flush()
+            dbsession.info['blame'] = user
+            dbsession.add(user)
+            dbsession.flush()
             site = studies.Site(
                 name=u'UCSD',
                 title=u'UCSD',
                 description=u'UCSD Campus',
                 create_date=date.today())
 
-            db_session.add(studies.Site(
+            dbsession.add(studies.Site(
                 name=u'UCLA',
                 title=u'UCLA',
                 description=u'UCLA Campus',
                 create_date=date.today()))
 
-            db_session.add(studies.Patient(
+            dbsession.add(studies.Patient(
                 initials=u'ian',
                 nurse=u'imanurse@ucsd.edu',
                 site=site,
                 pid=u'123'
             ))
 
-            db_session.flush()
+            dbsession.flush()
 
     @pytest.mark.parametrize('group', ['UCLA:member'])
-    def test_not_allowed(self, app, db_session, group):
+    def test_not_allowed(self, app, dbsession, group):
         environ = make_environ(userid=USERID, groups=[group])
         res = app.get(
             self.url.format('123'), extra_environ=environ, status='*')
@@ -426,9 +426,9 @@ class TestPermissionsPatientFormsView:
     url = '/studies/patients/123/forms'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, db_session):
+    def populate(self, app, dbsession):
         import transaction
-        from occams_studies import models as studies
+        from occams import models as studies
         from occams_datastore import models as datastore
         from datetime import date
 
@@ -436,16 +436,16 @@ class TestPermissionsPatientFormsView:
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            db_session.info['blame'] = user
-            db_session.add(user)
-            db_session.flush()
+            dbsession.info['blame'] = user
+            dbsession.add(user)
+            dbsession.flush()
             site = studies.Site(
                 name=u'UCSD',
                 title=u'UCSD',
                 description=u'UCSD Campus',
                 create_date=date.today())
 
-            db_session.add(studies.Patient(
+            dbsession.add(studies.Patient(
                 initials=u'ian',
                 nurse=u'imanurse@ucsd.edu',
                 site=site,
@@ -455,7 +455,7 @@ class TestPermissionsPatientFormsView:
     @pytest.mark.parametrize('group', [
         'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer',
         'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member'])
-    def test_allowed(self, app, db_session, group):
+    def test_allowed(self, app, dbsession, group):
         environ = make_environ(userid=USERID, groups=[group])
         res = app.get(self.url, extra_environ=environ, status='*')
 
@@ -464,13 +464,13 @@ class TestPermissionsPatientFormsView:
     @pytest.mark.parametrize('group', [
         'UCLA:coordinator', 'UCLA:enterer', 'UCLA:reviewer',
         'UCLA:consumer', 'UCLA:member'])
-    def test_not_allowed(self, app, db_session, group):
+    def test_not_allowed(self, app, dbsession, group):
         environ = make_environ(userid=USERID, groups=[group])
         res = app.get(self.url, extra_environ=environ, status='*')
 
         assert 403 == res.status_code
 
-    def test_not_authenticated(self, app, db_session):
+    def test_not_authenticated(self, app, dbsession):
         app.get(self.url.format('123'), status=401)
 
 
@@ -479,9 +479,9 @@ class TestPermissionsPatientFormsAdd:
     url = '/studies/patients/123/forms'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, db_session):
+    def populate(self, app, dbsession):
         import transaction
-        from occams_studies import models as studies
+        from occams import models as studies
         from occams_datastore import models as datastore
         from datetime import date
 
@@ -489,9 +489,9 @@ class TestPermissionsPatientFormsAdd:
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            db_session.info['blame'] = user
-            db_session.add(user)
-            db_session.flush()
+            dbsession.info['blame'] = user
+            dbsession.add(user)
+            dbsession.flush()
             site = studies.Site(
                 name=u'UCSD',
                 title=u'UCSD',
@@ -521,7 +521,7 @@ class TestPermissionsPatientFormsAdd:
                 schemata=set([form])
             )
 
-            db_session.add(studies.Enrollment(
+            dbsession.add(studies.Enrollment(
                 patient=patient,
                 study=study,
                 consent_date=date(2014, 12, 22)
@@ -529,13 +529,13 @@ class TestPermissionsPatientFormsAdd:
 
     @pytest.mark.parametrize('group', [
         'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer'])
-    def test_allowed(self, app, db_session, group):
+    def test_allowed(self, app, dbsession, group):
         from occams_datastore import models as datastore
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
 
-        schema = db_session.query(datastore.Schema).filter(
+        schema = dbsession.query(datastore.Schema).filter(
             datastore.Schema.name == u'test_schema').one()
         schema_id = schema.id
 
@@ -559,13 +559,13 @@ class TestPermissionsPatientFormsAdd:
     @pytest.mark.parametrize('group', [
         'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
         'UCLA:coordinator', 'UCLA:enterer', None])
-    def test_not_allowed(self, app, db_session, group):
+    def test_not_allowed(self, app, dbsession, group):
         from occams_datastore import models as datastore
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
 
-        schema = db_session.query(datastore.Schema).filter(
+        schema = dbsession.query(datastore.Schema).filter(
             datastore.Schema.name == u'test_schema').one()
         schema_id = schema.id
 
@@ -586,7 +586,7 @@ class TestPermissionsPatientFormsAdd:
 
         assert 403 == res.status_code
 
-    def test_not_authenticated(self, app, db_session):
+    def test_not_authenticated(self, app, dbsession):
         app.post(self.url.format('123'), status=401)
 
 
@@ -595,9 +595,9 @@ class TestPermissionsPatientFormsDelete:
     url = '/studies/patients/123/forms'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, db_session):
+    def populate(self, app, dbsession):
         import transaction
-        from occams_studies import models as studies
+        from occams import models as studies
         from occams_datastore import models as datastore
         from datetime import date
 
@@ -605,9 +605,9 @@ class TestPermissionsPatientFormsDelete:
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            db_session.info['blame'] = user
-            db_session.add(user)
-            db_session.flush()
+            dbsession.info['blame'] = user
+            dbsession.add(user)
+            dbsession.flush()
             site = studies.Site(
                 name=u'UCSD',
                 title=u'UCSD',
@@ -637,20 +637,20 @@ class TestPermissionsPatientFormsDelete:
                 schemata=set([form])
             )
 
-            db_session.add(studies.Enrollment(
+            dbsession.add(studies.Enrollment(
                 patient=patient,
                 study=study,
                 consent_date=date(2014, 12, 22)
             ))
 
             entity = datastore.Entity(schema=form)
-            db_session.add(entity)
-            db_session.flush()
+            dbsession.add(entity)
+            dbsession.flush()
             self.entity_id = entity.id
 
     @pytest.mark.parametrize('group', [
         'administrator', 'manager', 'UCSD:coordinator'])
-    def test_allowed(self, app, db_session, group):
+    def test_allowed(self, app, dbsession, group):
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
@@ -675,7 +675,7 @@ class TestPermissionsPatientFormsDelete:
         'UCSD:enterer', 'UCSD:reviewer', 'UCSD:consumer',
         'UCSD:member',
         'UCLA:coordinator', None])
-    def test_not_allowed(self, app, db_session, group):
+    def test_not_allowed(self, app, dbsession, group):
 
         environ = make_environ(userid=USERID, groups=[group])
         csrf_token = get_csrf_token(app, environ)
@@ -696,7 +696,7 @@ class TestPermissionsPatientFormsDelete:
 
         assert 403 == res.status_code
 
-    def test_not_authenticated(self, app, db_session):
+    def test_not_authenticated(self, app, dbsession):
         app.delete(self.url, status=401)
 
 
@@ -705,9 +705,9 @@ class TestPermissionsPatientFormView:
     url = '/studies/patients/123/forms/{}'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, db_session):
+    def populate(self, app, dbsession):
         import transaction
-        from occams_studies import models as studies
+        from occams import models as studies
         from occams_datastore import models as datastore
         from datetime import date
 
@@ -715,9 +715,9 @@ class TestPermissionsPatientFormView:
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            db_session.info['blame'] = user
-            db_session.add(user)
-            db_session.flush()
+            dbsession.info['blame'] = user
+            dbsession.add(user)
+            dbsession.flush()
             site = studies.Site(
                 name=u'UCSD',
                 title=u'UCSD',
@@ -748,17 +748,17 @@ class TestPermissionsPatientFormView:
             )
 
             state = (
-                db_session.query(datastore.State)
+                dbsession.query(datastore.State)
                 .filter_by(name=u'pending-entry')
                 .one())
 
-            db_session.add(datastore.Entity(
+            dbsession.add(datastore.Entity(
                 state=state,
                 schema=form,
                 collect_date=date(2015, 2, 1)
             ))
 
-            db_session.add(studies.Enrollment(
+            dbsession.add(studies.Enrollment(
                 patient=patient,
                 study=study,
                 consent_date=date(2014, 12, 22)
@@ -767,11 +767,11 @@ class TestPermissionsPatientFormView:
     @pytest.mark.parametrize('group', [
         'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer',
         'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member'])
-    def test_allowed(self, app, db_session, group):
+    def test_allowed(self, app, dbsession, group):
         from occams_datastore import models as datastore
 
         environ = make_environ(userid=USERID, groups=[group])
-        entity_id = db_session.query(datastore.Entity.id).filter(
+        entity_id = dbsession.query(datastore.Entity.id).filter(
             datastore.Entity.schema.has(name=u'test_schema')).scalar()
         res = app.get(
             self.url.format(entity_id), extra_environ=environ)
@@ -781,20 +781,20 @@ class TestPermissionsPatientFormView:
     @pytest.mark.parametrize('group', [
         'UCLA:coordinator', 'UCLA:enterer',
         'UCLA:reviewer', 'UCLA:consumer', 'UCLA:member'])
-    def test_not_allowed(self, app, db_session, group):
+    def test_not_allowed(self, app, dbsession, group):
         from occams_datastore import models as datastore
 
         environ = make_environ(userid=USERID, groups=[group])
-        entity_id = db_session.query(datastore.Entity.id).filter(
+        entity_id = dbsession.query(datastore.Entity.id).filter(
             datastore.Entity.schema.has(name=u'test_schema')).scalar()
         res = app.get(
             self.url.format(entity_id), extra_environ=environ, status='*')
 
         assert 403 == res.status_code
 
-    def test_not_authenticated(self, app, db_session):
+    def test_not_authenticated(self, app, dbsession):
         from occams_datastore import models as datastore
-        entity_id = db_session.query(datastore.Entity.id).filter(
+        entity_id = dbsession.query(datastore.Entity.id).filter(
             datastore.Entity.schema.has(name=u'test_schema')).scalar()
 
         app.get(self.url.format(entity_id), status=401)
@@ -805,9 +805,9 @@ class TestPermissionsPatientFormsEdit:
     url = '/studies/patients/123/forms/{}'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, db_session):
+    def populate(self, app, dbsession):
         import transaction
-        from occams_studies import models as studies
+        from occams import models as studies
         from occams_datastore import models as datastore
         from datetime import date
 
@@ -815,9 +815,9 @@ class TestPermissionsPatientFormsEdit:
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            db_session.info['blame'] = user
-            db_session.add(user)
-            db_session.flush()
+            dbsession.info['blame'] = user
+            dbsession.add(user)
+            dbsession.flush()
             site = studies.Site(
                 name=u'UCSD',
                 title=u'UCSD',
@@ -848,17 +848,17 @@ class TestPermissionsPatientFormsEdit:
             )
 
             state = (
-                db_session.query(datastore.State)
+                dbsession.query(datastore.State)
                 .filter_by(name=u'pending-entry')
                 .one())
 
-            db_session.add(datastore.Entity(
+            dbsession.add(datastore.Entity(
                 state=state,
                 schema=form,
                 collect_date=date(2015, 2, 1)
             ))
 
-            db_session.add(studies.Enrollment(
+            dbsession.add(studies.Enrollment(
                 patient=patient,
                 study=study,
                 consent_date=date(2014, 12, 22)
@@ -866,11 +866,11 @@ class TestPermissionsPatientFormsEdit:
 
     @pytest.mark.parametrize('group', [
         'administrator', 'manager', 'UCSD:coordinator', 'UCSD:enterer'])
-    def test_allowed(self, app, db_session, group):
+    def test_allowed(self, app, dbsession, group):
         from occams_datastore import models as datastore
 
         environ = make_environ(userid=USERID, groups=[group])
-        entity_id = db_session.query(datastore.Entity.id).filter(
+        entity_id = dbsession.query(datastore.Entity.id).filter(
             datastore.Entity.schema.has(name=u'test_schema')).scalar()
         res = app.post(
             self.url.format(entity_id), extra_environ=environ,
@@ -881,11 +881,11 @@ class TestPermissionsPatientFormsEdit:
     @pytest.mark.parametrize('group', [
         'UCSD:reviewer', 'UCSD:consumer', 'UCSD:member',
         'UCLA:coordinator', 'UCLA:enterer', 'UCLA:enterer', None])
-    def test_not_allowed(self, app, db_session, group):
+    def test_not_allowed(self, app, dbsession, group):
         from occams_datastore import models as datastore
 
         environ = make_environ(userid=USERID, groups=[group])
-        entity_id = db_session.query(datastore.Entity.id).filter(
+        entity_id = dbsession.query(datastore.Entity.id).filter(
             datastore.Entity.schema.has(name=u'test_schema')).scalar()
         res = app.post(
             self.url.format(entity_id), extra_environ=environ,
@@ -893,9 +893,9 @@ class TestPermissionsPatientFormsEdit:
 
         assert 403 == res.status_code
 
-    def test_not_authenticated(self, app, db_session):
+    def test_not_authenticated(self, app, dbsession):
         from occams_datastore import models as datastore
-        entity_id = db_session.query(datastore.Entity.id).filter(
+        entity_id = dbsession.query(datastore.Entity.id).filter(
             datastore.Entity.schema.has(name=u'test_schema')).scalar()
 
         app.post(self.url.format(entity_id), status=401)

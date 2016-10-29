@@ -1,7 +1,7 @@
 from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS
 from sqlalchemy import orm
 
-from occams_datastore import models as datastore
+from .schema import Schema, Attribute
 
 
 class FormFactory(object):
@@ -16,10 +16,10 @@ class FormFactory(object):
         self.request = request
 
     def __getitem__(self, key):
-        db_session = self.request.db_session
+        dbsession = self.request.dbsession
         (exists,) = (
-            db_session.query(
-                db_session.query(datastore.Schema)
+            dbsession.query(
+                dbsession.query(Schema)
                 .filter_by(name=key)
                 .exists())
             .one())
@@ -60,9 +60,9 @@ class VersionFactory(object):
         self.request = request
 
     def __getitem__(self, key):
-        db_session = self.request.db_session
+        dbsession = self.request.dbsession
         query = (
-            db_session.query(datastore.Schema)
+            dbsession.query(Schema)
             .filter_by(name=self.__parent__.__name__))
         try:
             key = int(key)
@@ -96,8 +96,8 @@ def schema_acl(self):
 
 
 def schema_getitem(self, key):
-    db_session = orm.object_session(self)
-    request = db_session.info['request']
+    dbsession = orm.object_session(self)
+    request = dbsession.info['request']
     if key == 'fields':
         item = AttributeFactory(request)
         item.__name__ = key
@@ -105,8 +105,8 @@ def schema_getitem(self, key):
         return item
 
 
-datastore.Schema.__acl__ = property(schema_acl)
-datastore.Schema.__getitem__ = schema_getitem
+Schema.__acl__ = property(schema_acl)
+Schema.__getitem__ = schema_getitem
 
 
 class AttributeFactory(object):
@@ -128,10 +128,10 @@ class AttributeFactory(object):
         self.request = request
 
     def __getitem__(self, key):
-        db_session = self.request.db_session
+        dbsession = self.request.dbsession
         try:
             attribute = (
-                db_session.query(datastore.Attribute)
+                dbsession.query(Attribute)
                 .filter_by(schema=self.__parent__, name=key)
                 .one())
         except orm.exc.NoResultFound:
@@ -156,4 +156,4 @@ def attribute_acl(self):
             (Allow, 'editor', 'view')]
 
 
-datastore.Attribute.__acl__ = property(attribute_acl)
+Attribute.__acl__ = property(attribute_acl)

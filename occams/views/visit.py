@@ -9,13 +9,10 @@ import wtforms
 from wtforms.ext.dateutil.fields import DateField
 from wtforms_components import DateRange
 
-from occams.utils.forms import wtferrors, ModelField, Form
-from occams_datastore import models as datastore
-from occams_forms.renderers import \
-    make_form, render_form, apply_data, entity_data, modes
-
 from .. import _, models
-from . import form as form_views
+from ..utils.forms import wtferrors, ModelField, Form
+from ..renderers import make_form, render_form, apply_data, entity_data, modes
+from . import entry as form_views
 
 
 @view_config(
@@ -24,11 +21,11 @@ from . import form as form_views
     xhr=True,
     renderer='json')
 def list_json(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
     patient = context.__parent__
 
     visits_query = (
-        db_session.query(models.Visit)
+        dbsession.query(models.Visit)
         .options(
             orm.joinedload(models.Visit.cycles).joinedload(models.Cycle.study))
         .filter_by(patient=patient)
@@ -45,10 +42,10 @@ def list_json(context, request):
     permission='view',
     renderer='../templates/visit/view.pt')
 def view(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
     return {
         'visit': view_json(context, request),
-        'is_lab_enabled': db_session.bind.has_table('specimen')
+        'is_lab_enabled': dbsession.bind.has_table('specimen')
         }
 
 
@@ -98,11 +95,11 @@ def cycles_json(context, request):
     """
     AJAX handler for cycle field options
     """
-    db_session = request.db_session
+    dbsession = request.dbsession
     data = {'cycles': []}
 
     query = (
-        db_session.query(models.Cycle)
+        dbsession.query(models.Cycle)
         .join(models.Cycle.study))
 
     if 'ids' in request.GET:
@@ -174,7 +171,7 @@ def validate_cycles(context, request):
     renderer='json')
 def edit_json(context, request):
     check_csrf_token(request)
-    db_session = request.db_session
+    dbsession = request.dbsession
     is_new = isinstance(context, models.VisitFactory)
     form = VisitSchema(context, request).from_json(request.json_body)
 
@@ -183,7 +180,7 @@ def edit_json(context, request):
 
     if is_new:
         visit = models.Visit(patient=context.__parent__)
-        db_session.add(visit)
+        dbsession.add(visit)
     else:
         visit = context
 
@@ -193,11 +190,11 @@ def edit_json(context, request):
     # Set the entire list and let sqlalchemy prune the orphans
     visit.cycles = form.cycles.data
 
-    db_session.flush()
+    dbsession.flush()
 
     # TODO: hard coded for now, will be removed when workflows are in place
     default_state = (
-        db_session.query(datastore.State)
+        dbsession.query(models.State)
         .filter_by(name='pending-entry').one())
 
     # Update collect date for those forms that were never modified
@@ -210,38 +207,38 @@ def edit_json(context, request):
     if form.include_forms.data:
 
         relative_schema = (
-            db_session.query(
-                datastore.Schema.id.label('id'),
-                datastore.Schema.name.label('name'),
-                datastore.Schema.publish_date.label('publish_date'),
+            dbsession.query(
+                models.Schema.id.label('id'),
+                models.Schema.name.label('name'),
+                models.Schema.publish_date.label('publish_date'),
                 sa.func.row_number().over(
-                    partition_by=datastore.Schema.name,
+                    partition_by=models.Schema.name,
                     order_by=(
                         # Rank by versions before the visit date or closest
-                        (datastore.Schema.publish_date <= visit.visit_date).desc(),
-                        sa.func.abs(datastore.Schema.publish_date - visit.visit_date).asc()
+                        (models.Schema.publish_date <= visit.visit_date).desc(),
+                        sa.func.abs(models.Schema.publish_date - visit.visit_date).asc()
                     ),
                 ).label('row_number'))
             .join(models.Cycle.schemata)
             .filter(models.Cycle.id.in_([c.id for c in visit.cycles]))
-            .filter(datastore.Schema.retract_date == sa.null())
+            .filter(models.Schema.retract_date == sa.null())
             .cte('relative_schema')
         )
 
         schemata_query = (
-            db_session.query(datastore.Schema)
-            .join(relative_schema, relative_schema.c.id == datastore.Schema.id)
+            dbsession.query(models.Schema)
+            .join(relative_schema, relative_schema.c.id == models.Schema.id)
             .filter(relative_schema.c.row_number == 1)
         )
 
         # Ignore already-added schemata
         if isinstance(context, models.Visit) and visit.entities:
             schemata_query = schemata_query.filter(
-                ~datastore.Schema.name.in_(
+                ~models.Schema.name.in_(
                     [entity.schema.name for entity in visit.entities]))
 
         for schema in schemata_query:
-            entity = datastore.Entity(
+            entity = models.Entity(
                 schema=schema,
                 collect_date=visit.visit_date,
                 state=default_state)
@@ -249,17 +246,17 @@ def edit_json(context, request):
             visit.entities.add(entity)
 
     # Lab might not be enabled on a environments, check first
-    if form.include_specimen.data and db_session.bind.has_table('specimen'):
+    if form.include_specimen.data and dbsession.bind.has_table('specimen'):
         from occams_lims import models as lab
         drawstate = (
-            db_session.query(lab.SpecimenState)
+            dbsession.query(lab.SpecimenState)
             .filter_by(name=u'pending-draw')
             .one())
         location_id = visit.patient.site.lab_location.id
         for cycle in visit.cycles:
             if cycle in form.cycles.data:
                 for specimen_type in cycle.specimen_types:
-                    db_session.add(lab.Specimen(
+                    dbsession.add(lab.Specimen(
                         patient=visit.patient,
                         cycle=cycle,
                         specimen_type=specimen_type,
@@ -268,7 +265,7 @@ def edit_json(context, request):
                         location_id=location_id,
                         tubes=specimen_type.default_tubes))
 
-    db_session.flush()
+    dbsession.flush()
 
     return view_json(visit, request)
 
@@ -280,11 +277,11 @@ def edit_json(context, request):
     renderer='json')
 def delete_json(context, request):
     check_csrf_token(request)
-    db_session = request.db_session
-    list(map(db_session.delete, context.entities))
+    dbsession = request.dbsession
+    list(map(dbsession.delete, context.entities))
     context.patient.modify_date = datetime.now()
-    db_session.delete(context)
-    db_session.flush()
+    dbsession.delete(context)
+    dbsession.flush()
     request.session.flash(_(
         u'Sucessfully deleted ${visit_date}',
         mapping={'visit_date': context.visit_date}))
@@ -302,14 +299,14 @@ def form(context, request):
         because of the way patient forms are handled
     """
 
-    db_session = request.db_session
+    dbsession = request.dbsession
     visit = context.__parent__.__parent__
     allowed_schemata = (
-        db_session.query(datastore.Schema)
+        dbsession.query(models.Schema)
         .join(models.study_schema_table)
         .join(models.Study)
         .join(models.Cycle)
-        .filter(datastore.Schema.name == context.schema.name)
+        .filter(models.Schema.name == context.schema.name)
         .filter(models.Cycle.id.in_([cycle.id for cycle in visit.cycles])))
     allowed_versions = [s.publish_date for s in allowed_schemata]
 
@@ -321,7 +318,7 @@ def form(context, request):
         transition = modes.AUTO
 
     Form = make_form(
-        db_session,
+        dbsession,
         context.schema,
         entity=context,
         show_metadata=True,
@@ -338,8 +335,8 @@ def form(context, request):
 
         if form.validate():
             upload_dir = request.registry.settings['studies.blob.dir']
-            apply_data(db_session, context, form.data, upload_dir)
-            db_session.flush()
+            apply_data(dbsession, context, form.data, upload_dir)
+            dbsession.flush()
             request.session.flash(
                 _(u'Changes saved for: ${form}', mapping={
                     'form': context.schema.title}),
@@ -363,13 +360,13 @@ def form(context, request):
 
 
 def VisitSchema(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     def unique_cycle(form, field):
         is_new = isinstance(context, models.VisitFactory)
         patient = context.__parent__ if is_new else context.patient
         query = (
-            db_session.query(models.Visit)
+            dbsession.query(models.Visit)
             .filter(models.Visit.patient == patient)
             .filter(models.Visit.cycles.any(
                 (~models.Cycle.is_interim)
@@ -388,12 +385,12 @@ def VisitSchema(context, request):
         is_new = isinstance(context, models.VisitFactory)
         patient = context.__parent__ if is_new else context.patient
         exists_query = (
-            db_session.query(models.Visit)
+            dbsession.query(models.Visit)
             .filter_by(patient=patient)
             .filter_by(visit_date=field.data))
         if not is_new:
             exists_query = exists_query.filter(models.Visit.id != context.id)
-        (exists,) = db_session.query(exists_query.exists()).one()
+        (exists,) = dbsession.query(exists_query.exists()).one()
         if exists:
             raise wtforms.ValidationError(request.localizer.translate(
                 _(u'Visit already exists')))
@@ -401,7 +398,7 @@ def VisitSchema(context, request):
     class VisitForm(Form):
         cycles = wtforms.FieldList(
             ModelField(
-                db_session=db_session,
+                dbsession=dbsession,
                 class_=models.Cycle,
                 validators=[
                     wtforms.validators.InputRequired(),

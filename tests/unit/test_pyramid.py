@@ -15,5 +15,5 @@ class TestPyramidIntegration:
         with NamedTemporaryFile() as fp:
             url = 'sqlite:///' + fp.name
             config.registry.settings['roster.db.url'] = url
-            config.registry['db_sessionmaker'] = orm.sessionmaker()
+            config.registry['dbsessionmaker'] = orm.sessionmaker()
             config.include('occams_roster')

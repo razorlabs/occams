@@ -29,7 +29,7 @@ if sys.version_info < (3, 0):
 
 setup(
     name='occams',
-    version='4.0.0-alpha1',
+    version='4.0.0-dev1',
     description='OCCAMS Application Platform',
     long_description=README,
     classifiers=[
@@ -47,8 +47,8 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=REQUIRES,
-    extras_require=DEVELOP,
-    tests_require={'develop': DEVELOP},
+    extras_require={'develop': DEVELOP},
+    tests_require=DEVELOP,
     entry_points="""\
     [paste.app_factory]
     main = occams:main

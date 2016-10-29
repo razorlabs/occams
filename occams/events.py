@@ -4,7 +4,7 @@ Pyramid-specific events
 
 from pyramid.events import subscriber, NewResponse, NewRequest
 
-from occams_datastore import models as datastore
+from . import models
 
 
 @subscriber(NewResponse)
@@ -23,11 +23,11 @@ def track_user_on_request(event):
     Annotates the database session with the current user.
     """
     request = event.request
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     if request.authenticated_userid is not None:
-        db_session.info['blame'] = (
-            db_session.query(datastore.User)
+        dbsession.info['blame'] = (
+            dbsession.query(models.User)
             .filter_by(key=request.authenticated_userid)
             .one())
 

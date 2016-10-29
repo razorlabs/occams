@@ -12,8 +12,8 @@
         <nav metal:use-macro="load: header-nav.pt" />
 
         <!-- Use template so we can reuse in home view -->
-        <div metal:use-macro="load: ../form/modal-form-add.pt"></div>
-        <div metal:use-macro="load: ../form/modal-form-delete.pt"></div>
+        <div metal:use-macro="load: ../entry/modal-form-add.pt"></div>
+        <div metal:use-macro="load: ../entry/modal-form-delete.pt"></div>
       </header>
 
       <!-- ko ifnot: entities().length > 0 -->

@@ -9,22 +9,22 @@ from decimal import Decimal
 import pytest
 
 
-def test_state_unique_name(db_session):
+def test_state_unique_name(dbsession):
     """
     It should only allow states with unique names
     """
     import sqlalchemy.exc
     from occams_datastore import models
 
-    db_session.add(models.State(name=u'pending-entry', title=u'Pending Entry'))
-    db_session.flush()
+    dbsession.add(models.State(name=u'pending-entry', title=u'Pending Entry'))
+    dbsession.flush()
 
-    db_session.add(models.State(name=u'pending-entry', title=u'Pending Entry'))
+    dbsession.add(models.State(name=u'pending-entry', title=u'Pending Entry'))
     with pytest.raises(sqlalchemy.exc.IntegrityError):
-        db_session.flush()
+        dbsession.flush()
 
 
-def test_state_entity_relationship(db_session):
+def test_state_entity_relationship(dbsession):
     """
     It should implement state/entity relationship
     """
@@ -35,20 +35,20 @@ def test_state_entity_relationship(db_session):
                            publish_date=date(2000, 1, 1))
     pending_entry = models.State(name=u'pending-entry', title=u'Pending Entry')
     entity = models.Entity(schema=schema)
-    db_session.add_all([pending_entry, entity])
-    db_session.flush()
+    dbsession.add_all([pending_entry, entity])
+    dbsession.flush()
 
     assert entity.state is None
     assert pending_entry.entities.count() == 0
 
     entity.state = pending_entry
-    db_session.flush()
+    dbsession.flush()
 
     assert entity.state is not None
     assert pending_entry.entities.count() == 1
 
 
-def test_entity_add_unpublished_schema(db_session):
+def test_entity_add_unpublished_schema(dbsession):
     """
     It should not allow adding entities related to unpublished schemata
     """
@@ -57,12 +57,12 @@ def test_entity_add_unpublished_schema(db_session):
 
     schema = models.Schema(name=u'Foo', title=u'')
     entity = models.Entity(schema=schema)
-    db_session.add(entity)
+    dbsession.add(entity)
     with pytest.raises(InvalidEntitySchemaError):
-        db_session.flush()
+        dbsession.flush()
 
 
-def test_entity_default_collect_date(db_session):
+def test_entity_default_collect_date(dbsession):
     """
     It should default to today's date as the collect_date if not is provided
     """
@@ -73,8 +73,8 @@ def test_entity_default_collect_date(db_session):
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
     entity = models.Entity(schema=schema)
-    db_session.add(entity)
-    db_session.flush()
+    dbsession.add(entity)
+    dbsession.flush()
     assert date.today() == entity.collect_date
 
     # If one is supplied by the user, don't do anything
@@ -82,8 +82,8 @@ def test_entity_default_collect_date(db_session):
     entity = models.Entity(
         schema=schema,
         collect_date=collect_date)
-    db_session.add(entity)
-    db_session.flush()
+    dbsession.add(entity)
+    dbsession.flush()
     assert entity.collect_date == collect_date
 
 
@@ -104,7 +104,7 @@ def test_entity_default_collect_date(db_session):
          datetime(2010, 5, 1, 5, 3, 0),
          datetime(2010, 8, 1, 5, 3, 0)])
 ])
-def check_entity_types(db_session, type, simple, update, collection):
+def check_entity_types(dbsession, type, simple, update, collection):
     """
     It should properly handle supported types
     """
@@ -118,8 +118,8 @@ def check_entity_types(db_session, type, simple, update, collection):
             's1': models.Attribute(
                 name='s1', title=u'Section 1', type='section', order=1)})
     entity = models.Entity(schema=schema)
-    db_session.add(entity)
-    db_session.flush()
+    dbsession.add(entity)
+    dbsession.flush()
 
     order = 1
 
@@ -134,24 +134,24 @@ def check_entity_types(db_session, type, simple, update, collection):
         title=u'', type=type, is_required=False, order=order)
     assert entity[simpleName] is None
     entity[simpleName] = None
-    db_session.flush()
+    dbsession.flush()
     assert entity[simpleName] is None
 
     # Update value
     entity[simpleName] = simple
-    db_session.flush()
+    dbsession.flush()
     assert simple == entity[simpleName]
 
     # Double check auditing
     valueQuery = (
-        db_session.query(ModelClass)
+        dbsession.query(ModelClass)
         .filter_by(attribute=schema.attributes[simpleName]))
     valueObject = valueQuery.one()
     assert 1 == valueObject.revision
 
     # Update again
     entity[simpleName] = update
-    db_session.flush()
+    dbsession.flush()
     assert update == entity[simpleName]
 
     # Triple check auditing
@@ -167,18 +167,18 @@ def check_entity_types(db_session, type, simple, update, collection):
         schema=schema,
         title=u'', type=type, is_collection=True, order=order)
     entity[collectionName] = collection
-    db_session.flush()
+    dbsession.flush()
     assert set(collection) == set(entity[collectionName])
 
     valueQuery = (
-        db_session.query(ModelClass)
+        dbsession.query(ModelClass)
         .filter_by(attribute=schema.attributes[collectionName]))
 
     order += 1
 
     # Make sure we can also update
     entity[collectionName] = collection[:2]
-    db_session.flush()
+    dbsession.flush()
     assert set(collection[:2]) == set(entity[collectionName])
     assert 2 == valueQuery.count()
 
@@ -187,7 +187,7 @@ def check_entity_types(db_session, type, simple, update, collection):
     assert sorted([1, 1]) == sorted([v.revision for v in valueQuery])
 
 
-def test_entity_force_date(db_session):
+def test_entity_force_date(dbsession):
     """
     It should maintain a date object for date types.
     (Sometimes applications will blindly assign datetimes...)
@@ -212,12 +212,12 @@ def test_entity_force_date(db_session):
     today = now.date()
 
     entity[simpleName] = now
-    db_session.flush()
+    dbsession.flush()
     assert isinstance(entity[simpleName], date)
     assert today == entity[simpleName]
 
 
-def test_entity_choices(db_session):
+def test_entity_choices(dbsession):
     """
     It should properly handle choices
     """
@@ -229,8 +229,8 @@ def test_entity_choices(db_session):
     s1 = models.Attribute(
         schema=schema, name='s1', title=u'Section 1', type='section', order=0)
     entity = models.Entity(schema=schema)
-    db_session.add(entity)
-    db_session.flush()
+    dbsession.add(entity)
+    dbsession.flush()
 
     # Do simple values
     simpleName = 'choicesimple'
@@ -247,11 +247,11 @@ def test_entity_choices(db_session):
             '005': models.Choice(name=u'005', title=u'Jaz', order=5),
             })
     entity[simpleName] = None
-    db_session.flush()
+    dbsession.flush()
     assert entity[simpleName] is None
 
     entity[simpleName] = u'002'
-    db_session.flush()
+    dbsession.flush()
     assert u'002' == entity[simpleName]
 
     # Now try collections
@@ -268,12 +268,12 @@ def test_entity_choices(db_session):
             '004': models.Choice(name=u'004', title=u'Caz', order=4),
             '005': models.Choice(name=u'005', title=u'Jaz', order=5)})
     entity[collectionName] = [u'001', u'002', u'005']
-    db_session.flush()
+    dbsession.flush()
     assert sorted([u'001', u'002', u'005']) == \
         sorted(entity['choicecollection'])
 
 
-def test_entity_blob_type(db_session):
+def test_entity_blob_type(dbsession):
     """
     It should be able to keep track of file uploads (will not be storing in DB)
     """
@@ -290,23 +290,23 @@ def test_entity_blob_type(db_session):
         name=u'theblob', title=u'', type='blob', order=0)
 
     entity = models.Entity(schema=schema)
-    db_session.add(entity)
-    db_session.flush()
+    dbsession.add(entity)
+    dbsession.flush()
     entity_id = entity.id
 
     # Add value
     entity['theblob'] = models.BlobInfo(file_name=u'foo', path='bar/baz.gif')
-    db_session.add(entity)
-    db_session.flush()
-    entity = db_session.query(models.Entity).get(entity_id)
+    dbsession.add(entity)
+    dbsession.flush()
+    entity = dbsession.query(models.Entity).get(entity_id)
     blob = entity['theblob']
     assert u'foo' == blob.file_name
     assert 'bar/baz.gif' == blob.path
 
     # Clear value
     entity['theblob'] = None
-    db_session.flush()
-    entity = db_session.query(models.Entity).get(entity_id)
+    dbsession.flush()
+    entity = dbsession.query(models.Entity).get(entity_id)
     blob = entity['theblob']
     assert blob is None
 
@@ -324,7 +324,7 @@ def test_entity_blob_type(db_session):
         datetime(2009, 5, 6),
         datetime(2010, 4, 6))
 ])
-def check_value_min_constraint(db_session, type_, limit, below, equal, over):
+def check_value_min_constraint(dbsession, type_, limit, below, equal, over):
     """
     It should validate against minimum constratins
     """
@@ -337,8 +337,8 @@ def check_value_min_constraint(db_session, type_, limit, below, equal, over):
     s1 = models.Attribute(
         schema=schema, name='s1', title=u'Section 1', type='section', order=0)
     entity = models.Entity(schema=schema)
-    db_session.add(entity)
-    db_session.flush()
+    dbsession.add(entity)
+    dbsession.flush()
 
     models.Attribute(
         schema=schema, parent_attribute=s1,
@@ -374,7 +374,7 @@ def check_value_min_constraint(db_session, type_, limit, below, equal, over):
         datetime(2009, 5, 6),
         datetime(2010, 4, 6))
 ])
-def check_value_max_constraint(db_session, type_, limit, below, equal, over):
+def check_value_max_constraint(dbsession, type_, limit, below, equal, over):
     """
     It should validate against maximum constraints
     """
@@ -387,8 +387,8 @@ def check_value_max_constraint(db_session, type_, limit, below, equal, over):
     s1 = models.Attribute(
         schema=schema, name='s1', title=u'Section 1', type='section', order=0)
     entity = models.Entity(schema=schema)
-    db_session.add(entity)
-    db_session.flush()
+    dbsession.add(entity)
+    dbsession.flush()
 
     models.Attribute(
         schema=schema, parent_attribute=s1,
@@ -409,7 +409,7 @@ def check_value_max_constraint(db_session, type_, limit, below, equal, over):
         entity['boolean'] = True
 
 
-def test_validator_min_constraint(db_session):
+def test_validator_min_constraint(dbsession):
     """
     It should validate string/number value min/max
     """
@@ -430,11 +430,11 @@ def test_validator_min_constraint(db_session):
         is_required=False,
         value_min=3,
         order=0)
-    db_session.add(schema)
-    db_session.flush()
+    dbsession.add(schema)
+    dbsession.flush()
 
     entity = models.Entity(schema=schema)
-    db_session.add(entity)
+    dbsession.add(entity)
 
     entity['test'] = None
 
@@ -442,11 +442,11 @@ def test_validator_min_constraint(db_session):
         entity['test'] = u'f'
 
     entity['test'] = u'foo'
-    db_session.flush()
+    dbsession.flush()
     assert 'foo' == entity['test']
 
 
-def test_validator_max_constraint(db_session):
+def test_validator_max_constraint(dbsession):
     """
     It should validate string/number value min/max
     """
@@ -467,11 +467,11 @@ def test_validator_max_constraint(db_session):
         is_required=False,
         value_max=3,
         order=0)
-    db_session.add(schema)
-    db_session.flush()
+    dbsession.add(schema)
+    dbsession.flush()
 
     entity = models.Entity(schema=schema)
-    db_session.add(entity)
+    dbsession.add(entity)
 
     entity['test'] = None
 
@@ -479,11 +479,11 @@ def test_validator_max_constraint(db_session):
         entity['test'] = u'foobar'
 
     entity['test'] = u'foo'
-    db_session.flush()
+    dbsession.flush()
     assert 'foo' == entity['test']
 
 
-def test_validator_pattern_constraint(db_session):
+def test_validator_pattern_constraint(dbsession):
     """
     It should validate against string pattern constraints
     """
@@ -505,11 +505,11 @@ def test_validator_pattern_constraint(db_session):
         # Valid US phone number
         pattern=r'\d{3}-\d{3}-\d{4}',
         order=0)
-    db_session.add(schema)
-    db_session.flush()
+    dbsession.add(schema)
+    dbsession.flush()
 
     entity = models.Entity(schema=schema)
-    db_session.add(entity)
+    dbsession.add(entity)
 
     entity['test'] = None
 
@@ -517,11 +517,11 @@ def test_validator_pattern_constraint(db_session):
         entity['test'] = u'trollol'
 
     entity['test'] = u'123-456-7890'
-    db_session.flush()
+    dbsession.flush()
     assert '123-456-7890' == entity['test']
 
 
-def test_choice_constraint(db_session):
+def test_choice_constraint(dbsession):
     """
     It should validate against choice constraints
     """
@@ -540,18 +540,18 @@ def test_choice_constraint(db_session):
             '001': models.Choice(name=u'001', title=u'Foo', order=0),
             '002': models.Choice(name=u'002', title=u'Bar', order=1),
             '003': models.Choice(name=u'003', title=u'Baz', order=2)})
-    db_session.add(schema)
-    db_session.flush()
+    dbsession.add(schema)
+    dbsession.flush()
 
     entity = models.Entity(schema=schema)
-    db_session.add(entity)
+    dbsession.add(entity)
 
     entity['test'] = None
     entity['test'] = u'002'
-    db_session.flush()
+    dbsession.flush()
 
     entry = (
-        db_session.query(models.ValueChoice)
+        dbsession.query(models.ValueChoice)
         .filter(models.ValueChoice.value.has(name=u'002'))
         .one())
     assert entry.value.name == '002'

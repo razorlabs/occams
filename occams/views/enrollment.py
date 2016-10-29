@@ -12,13 +12,10 @@ import wtforms
 from wtforms.ext.dateutil.fields import DateField
 from wtforms_components import DateRange
 
-from occams.utils.forms import wtferrors, ModelField, Form
-from occams_forms.renderers import \
-    make_form, render_form, apply_data, entity_data, modes
-from occams_datastore import models as datastore
-from occams_datastore.reporting import build_report
-
 from .. import _, log, models
+from ..reporting import build_report
+from ..renderers import make_form, render_form, apply_data, entity_data, modes
+from ..utils.forms import wtferrors, ModelField, Form
 
 
 RAND_CHALLENGE, RAND_ENTER, RAND_VERIFY = range(3)
@@ -32,10 +29,10 @@ RAND_INFO_KEY = 'randomization_info'
     xhr=True,
     renderer='json')
 def list_json(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
     patient = context.__parent__
     enrollments_query = (
-        db_session.query(models.Enrollment)
+        dbsession.query(models.Enrollment)
         .filter_by(patient=patient)
         .options(
             orm.joinedload('patient').joinedload('site'),
@@ -135,7 +132,7 @@ def view_json(context, request):
     renderer='json')
 def edit_json(context, request):
     check_csrf_token(request)
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     form = EnrollmentSchema(context, request).from_json(request.json_body)
 
@@ -156,7 +153,7 @@ def edit_json(context, request):
     if not form.study.data.termination_schema:
         enrollment.termination_date = form.termination_date.data
 
-    db_session.flush()
+    dbsession.flush()
     return view_json(enrollment, request)
 
 
@@ -167,11 +164,11 @@ def edit_json(context, request):
     xhr=True,
     renderer='json')
 def delete_json(context, request):
-    db_session = request.db_session
-    list(map(db_session.delete, context.entities))
+    dbsession = request.dbsession
+    list(map(dbsession.delete, context.entities))
     context.patient.modify_date = datetime.now()
-    db_session.delete(context)
-    db_session.flush()
+    dbsession.delete(context)
+    dbsession.flush()
     request.session.flash(_(u'Deleted sucessfully'))
     return {'__next__': request.route_path('studies.patient',
                                            patient=context.patient.pid)}
@@ -183,24 +180,24 @@ def delete_json(context, request):
     xhr=True,
     renderer='string')
 def terminate_ajax(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
     try:
         entity = (
-            db_session.query(datastore.Entity)
-            .join(datastore.Entity.schema)
-            .filter(datastore.Schema.name.in_(
+            dbsession.query(models.Entity)
+            .join(models.Entity.schema)
+            .filter(models.Schema.name.in_(
                 # Only search for forms being used as temrination forms
-                db_session.query(datastore.Schema.name)
+                dbsession.query(models.Schema.name)
                 .join(models.Study.termination_schema)
                 .subquery()))
-            .join(datastore.Context)
+            .join(models.Context)
             .filter_by(external='enrollment', key=context.id)
             .one())
     except orm.exc.MultipleResultsFound:
         raise Exception('Should only have one...')
     except orm.exc.NoResultFound:
         schema = context.study.termination_schema
-        entity = datastore.Entity(schema=schema)
+        entity = models.Entity(schema=schema)
         # XXX: This is really bad form as we're applying
         # side-effects to a GET request, but there is no time
         # to make this look prety...
@@ -213,7 +210,7 @@ def terminate_ajax(context, request):
 
     if not entity.state:
         entity.state = (
-            db_session.query(datastore.State)
+            dbsession.query(models.State)
             .filter_by(name='pending-entry')
             .one())
 
@@ -229,7 +226,7 @@ def terminate_ajax(context, request):
         transition = modes.AUTO
 
     Form = make_form(
-        db_session, schema,
+        dbsession, schema,
         entity=entity, transition=transition, show_metadata=False)
 
     form = Form(request.POST, data=entity_data(entity))
@@ -253,9 +250,9 @@ def terminate_ajax(context, request):
                 # allowed, just assign the schema that's already being used
                 context.entities.add(entity)
             upload_dir = request.registry.settings['studies.blob.dir']
-            apply_data(db_session, entity, form.data, upload_dir)
+            apply_data(dbsession, entity, form.data, upload_dir)
             context.termination_date = form.termination_date.data
-            db_session.flush()
+            dbsession.flush()
             return HTTPOk(json=view_json(context, request))
         else:
             return HTTPBadRequest(json={'errors': wtferrors(form)})
@@ -273,11 +270,11 @@ def terminate_ajax(context, request):
 
 
 def _get_randomized_form(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
     try:
         entity = (
-            db_session.query(datastore.Entity)
-            .join(datastore.Entity.contexts)
+            dbsession.query(models.Entity)
+            .join(models.Entity.contexts)
             .filter_by(external='stratum', key=context.stratum.id)
             .one())
     except orm.exc.MultipleResultsFound:
@@ -285,7 +282,7 @@ def _get_randomized_form(context, request):
     except orm.exc.NoResultFound:
         raise HTTPNotFound()
     else:
-        Form = make_form(db_session, entity.schema, show_metadata=False)
+        Form = make_form(dbsession, entity.schema, show_metadata=False)
         form = Form(data=entity_data(entity))
     return form
 
@@ -378,7 +375,7 @@ def randomize_ajax(context, request):
       user.
     """
 
-    db_session = request.db_session
+    dbsession = request.dbsession
     enrollment = context
 
     if not enrollment.is_randomized:
@@ -433,7 +430,7 @@ def randomize_ajax(context, request):
 
         elif request.session[RAND_INFO_KEY]['stage'] == RAND_ENTER:
             Form = make_form(
-                db_session,
+                dbsession,
                 enrollment.study.randomization_schema,
                 show_metadata=False)
             form = Form(request.POST)
@@ -448,7 +445,7 @@ def randomize_ajax(context, request):
 
         elif request.session[RAND_INFO_KEY]['stage'] == RAND_VERIFY:
             Form = make_form(
-                db_session,
+                dbsession,
                 enrollment.study.randomization_schema,
                 show_metadata=False)
             form = Form(request.POST)
@@ -472,18 +469,18 @@ def randomize_ajax(context, request):
                             _query={'procid': internal_procid}))
                 else:
                     report = build_report(
-                        db_session, enrollment.study.randomization_schema.name)
+                        dbsession, enrollment.study.randomization_schema.name)
                     data = form.data
 
                     # Get an unassigned entity that matches the input criteria
                     query = (
-                        db_session.query(models.Stratum)
+                        dbsession.query(models.Stratum)
                         .filter(models.Stratum.study == enrollment.study)
                         .filter(models.Stratum.patient == sa.null())
                         .join(models.Stratum.contexts)
-                        .join(datastore.Context.entity)
-                        .add_entity(datastore.Entity)
-                        .join(report, report.c.id == datastore.Entity.id)
+                        .join(models.Context.entity)
+                        .add_entity(models.Entity)
+                        .join(report, report.c.id == models.Entity.id)
                         .filter(sa.and_(
                             *[(getattr(report.c, k) == v)
                                 for k, v in data.items()]))
@@ -499,13 +496,13 @@ def randomize_ajax(context, request):
                     # so far so good, set the contexts and complete the request
                     stratum.patient = enrollment.patient
                     entity.state = (
-                        db_session.query(datastore.State)
+                        dbsession.query(models.State)
                         .filter_by(name=u'complete')
                         .one())
                     entity.collect_date = date.today()
                     enrollment.patient.entities.add(entity)
                     enrollment.entities.add(entity)
-                    db_session.flush()
+                    dbsession.flush()
                     del request.session[RAND_INFO_KEY]
                     request.session.flash(
                         _(u'Randomization complete'), 'success')
@@ -535,7 +532,7 @@ def randomize_ajax(context, request):
     elif request.session[RAND_INFO_KEY]['stage'] == RAND_ENTER:
         template = '../templates/enrollment/randomize-enter.pt'
         Form = make_form(
-            db_session,
+            dbsession,
             enrollment.study.randomization_schema,
             show_metadata=False)
         Form.procid = wtforms.HiddenField()
@@ -543,7 +540,7 @@ def randomize_ajax(context, request):
     elif request.session[RAND_INFO_KEY]['stage'] == RAND_VERIFY:
         template = '../templates/enrollment/randomize-verify.pt'
         Form = make_form(
-            db_session,
+            dbsession,
             enrollment.study.randomization_schema,
             show_metadata=False)
         form = Form()
@@ -573,7 +570,7 @@ def randomize_ajax(context, request):
 
 
 def EnrollmentSchema(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     def check_cannot_edit_study(form, field):
         is_new = not isinstance(context, models.Enrollment)
@@ -608,11 +605,11 @@ def EnrollmentSchema(context, request):
             raise wtforms.ValidationError(request.localizer.translate(
                 _(u'Invalid reference number format for this study')))
         query = (
-            db_session.query(models.Enrollment)
+            dbsession.query(models.Enrollment)
             .filter_by(study=study, reference_number=number))
         if isinstance(context, models.Enrollment):
             query = query.filter(models.Enrollment.id != context.id)
-        (exists,) = db_session.query(query.exists()).one()
+        (exists,) = dbsession.query(query.exists()).one()
         if exists:
             raise wtforms.ValidationError(request.localizer.translate(
                 _(u'Reference number already in use.')))
@@ -623,21 +620,21 @@ def EnrollmentSchema(context, request):
         else:
             patient = context.patient
         query = (
-            db_session.query(models.Enrollment)
+            dbsession.query(models.Enrollment)
             .filter_by(
                 patient=patient,
                 study=form.study.data,
                 consent_date=form.consent_date.data))
         if isinstance(context, models.Enrollment):
             query = query.filter(models.Enrollment.id != context.id)
-        (exists,) = db_session.query(query.exists()).one()
+        (exists,) = dbsession.query(query.exists()).one()
         if exists:
             raise wtforms.ValidationError(request.localizer.translate(_(
                 u'This enrollment already exists.')))
 
     class EnrollmentForm(Form):
         study = ModelField(
-            db_session=db_session,
+            dbsession=dbsession,
             class_=models.Study,
             validators=[
                 wtforms.validators.InputRequired(),

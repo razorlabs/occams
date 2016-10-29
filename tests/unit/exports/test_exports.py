@@ -3,31 +3,31 @@
 
 class TestListAll:
 
-    def test_list(self, db_session):
-        from occams_studies import exports
-        from occams_studies.exports.plan import ExportPlan
+    def test_list(self, dbsession):
+        from occams import exports
+        from occams.exports.plan import ExportPlan
 
         class SomePlan(ExportPlan):
             name = 'someplan'
             title = u'Some Plan'
 
         plans = [SomePlan]
-        exportables = exports.list_all(plans, db_session)
+        exportables = exports.list_all(plans, dbsession)
         assert sorted(['someplan']) == sorted(exportables.keys())
 
 
 class TestWriteData:
 
-    def test_unicode(self, db_session):
+    def test_unicode(self, dbsession):
         """
         It should be able to export unicode strings
         """
         from contextlib import closing
         import six
         from sqlalchemy import literal_column, Integer, Unicode
-        from occams_studies import exports
+        from occams import exports
 
-        query = db_session.query(
+        query = dbsession.query(
             literal_column(u"'420'", Integer).label(u'anumeric'),
             literal_column(u"'¿Qué pasa?'", Unicode).label(u'astring'),
             )
@@ -43,13 +43,13 @@ class TestWriteData:
 
 class TestDumpCodeBook:
 
-    def test_header(self, db_session):
+    def test_header(self, dbsession):
         """
         It should have the standard codebook header.
         """
         from contextlib import closing
         import six
-        from occams_studies import exports
+        from occams import exports
 
         with closing(six.BytesIO()) as fp:
             exports.write_codebook(fp, [])

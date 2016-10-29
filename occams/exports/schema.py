@@ -12,13 +12,12 @@ from datetime import datetime
 from six import itervalues
 from sqlalchemy import orm, null, cast, String, literal_column
 
-from occams_datastore import models as datastore
-from occams_datastore.reporting import build_report
-from occams_datastore.utils.sql import group_concat, to_date
 
 from .. import models
 from .plan import ExportPlan
 from .codebook import types, row
+from ..reporting import build_report
+from ..utils.sql import group_concat, to_date
 
 
 class SchemaPlan(ExportPlan):
@@ -26,11 +25,11 @@ class SchemaPlan(ExportPlan):
     is_system = False
 
     @classmethod
-    def from_sql(cls, db_session, record):
+    def from_sql(cls, dbsession, record):
         """
         Creates a plan instance from an internal query inspection
         """
-        report = cls(db_session)
+        report = cls(dbsession)
         report.name = record.name
         report.title = record.title
         report.has_private = record.has_private
@@ -40,21 +39,21 @@ class SchemaPlan(ExportPlan):
         return report
 
     @classmethod
-    def from_schema(cls, db_session, name):
+    def from_schema(cls, dbsession, name):
         """
         Creates a plan from a schema name
         """
-        subquery = _list_schemata_info(db_session).subquery()
-        query = db_session.query(subquery).filter(subquery.c.name == name)
-        return cls.from_sql(db_session, query.one())
+        subquery = _list_schemata_info(dbsession).subquery()
+        query = dbsession.query(subquery).filter(subquery.c.name == name)
+        return cls.from_sql(dbsession, query.one())
 
     @classmethod
-    def list_all(cls, db_session, include_rand=True, include_private=True):
+    def list_all(cls, dbsession, include_rand=True, include_private=True):
         """
         Lists all the schema plans
         """
-        subquery = _list_schemata_info(db_session).subquery()
-        query = db_session.query(subquery)
+        subquery = _list_schemata_info(dbsession).subquery()
+        query = dbsession.query(subquery)
 
         if not include_rand:
             query = query.filter(~subquery.c.has_rand)
@@ -64,12 +63,12 @@ class SchemaPlan(ExportPlan):
 
         query = query.order_by(subquery.c.title)
 
-        return [cls.from_sql(db_session, r) for r in query]
+        return [cls.from_sql(dbsession, r) for r in query]
 
     @property
     def _is_aeh_partner_form(self):
         return (
-            'aeh' in self.db_session.bind.url.database
+            'aeh' in self.dbsession.bind.url.database
             and self.name in (
                 'IPartnerBio',
                 'IPartnerContact',
@@ -77,7 +76,7 @@ class SchemaPlan(ExportPlan):
                 'IPartnerDisclosure'))
 
     def codebook(self):
-        session = self.db_session
+        session = self.dbsession
         knowns = [
             row('id', self.name, types.NUMBER, decimal_places=0,
                 is_required=True, is_system=True),
@@ -128,16 +127,16 @@ class SchemaPlan(ExportPlan):
             yield column
 
         query = (
-            session.query(datastore.Attribute)
-            .join(datastore.Schema)
-            .filter(datastore.Schema.name == self.name)
-            .filter(datastore.Schema.publish_date.in_(self.versions))
-            .filter(datastore.Schema.retract_date == null()))
+            session.query(models.Attribute)
+            .join(models.Schema)
+            .filter(models.Schema.name == self.name)
+            .filter(models.Schema.publish_date.in_(self.versions))
+            .filter(models.Schema.retract_date == null()))
 
         query = (
             query.order_by(
-                datastore.Attribute.name,
-                datastore.Schema.publish_date))
+                models.Attribute.name,
+                models.Schema.publish_date))
 
         for attribute in query:
             yield row(attribute.name, attribute.schema.name, attribute.type,
@@ -170,10 +169,10 @@ class SchemaPlan(ExportPlan):
              use_choice_labels=False,
              expand_collections=False,
              ignore_private=True):
-        session = self.db_session
+        session = self.dbsession
         ids_query = (
-            session.query(datastore.Schema.id)
-            .filter(datastore.Schema.publish_date.in_(self.versions)))
+            session.query(models.Schema.id)
+            .filter(models.Schema.publish_date.in_(self.versions)))
         ids = [id for id, in ids_query]
 
         report = build_report(
@@ -188,10 +187,10 @@ class SchemaPlan(ExportPlan):
             session.query(report.c.id.label('id'))
             .add_column(
                 session.query(models.Patient.pid)
-                .join(datastore.Context,
-                      (datastore.Context.external == u'patient')
-                      & (datastore.Context.key == models.Patient.id))
-                .filter(datastore.Context.entity_id == report.c.id)
+                .join(models.Context,
+                      (models.Context.external == u'patient')
+                      & (models.Context.key == models.Patient.id))
+                .filter(models.Context.entity_id == report.c.id)
                 .correlate(report)
                 .as_scalar()
                 .label('pid'))
@@ -199,10 +198,10 @@ class SchemaPlan(ExportPlan):
                 session.query(models.Site.name)
                 .select_from(models.Patient)
                 .join(models.Site)
-                .join(datastore.Context,
-                      (datastore.Context.external == u'patient')
-                      & (datastore.Context.key == models.Patient.id))
-                .filter(datastore.Context.entity_id == report.c.id)
+                .join(models.Context,
+                      (models.Context.external == u'patient')
+                      & (models.Context.key == models.Patient.id))
+                .filter(models.Context.entity_id == report.c.id)
                 .correlate(report)
                 .as_scalar()
                 .label('site'))
@@ -210,22 +209,22 @@ class SchemaPlan(ExportPlan):
                 session.query(group_concat(models.Study.name, ';'))
                 .select_from(models.Enrollment)
                 .join(models.Study)
-                .join(datastore.Context,
-                      (datastore.Context.external == u'enrollment')
-                      & (datastore.Context.key == models.Enrollment.id))
-                .filter(datastore.Context.entity_id == report.c.id)
-                .group_by(datastore.Context.entity_id)
+                .join(models.Context,
+                      (models.Context.external == u'enrollment')
+                      & (models.Context.key == models.Enrollment.id))
+                .filter(models.Context.entity_id == report.c.id)
+                .group_by(models.Context.entity_id)
                 .correlate(report)
                 .as_scalar()
                 .label('enrollment'))
             .add_column(
                 session.query(group_concat(models.Enrollment.id, ';'))
                 .select_from(models.Enrollment)
-                .join(datastore.Context,
-                      (datastore.Context.external == u'enrollment')
-                      & (datastore.Context.key == models.Enrollment.id))
-                .filter(datastore.Context.entity_id == report.c.id)
-                .group_by(datastore.Context.entity_id)
+                .join(models.Context,
+                      (models.Context.external == u'enrollment')
+                      & (models.Context.key == models.Enrollment.id))
+                .filter(models.Context.entity_id == report.c.id)
+                .group_by(models.Context.entity_id)
                 .correlate(report)
                 .as_scalar()
                 .label('enrollment_ids'))
@@ -238,10 +237,10 @@ class SchemaPlan(ExportPlan):
                 .add_column(
                     session.query(models.Partner.id)
                     .select_from(models.Partner)
-                    .join(datastore.Context,
-                          (datastore.Context.external == u'partner')
-                          & (datastore.Context.key == models.Partner.id))
-                    .filter(datastore.Context.entity_id == report.c.id)
+                    .join(models.Context,
+                          (models.Context.external == u'partner')
+                          & (models.Context.key == models.Partner.id))
+                    .filter(models.Context.entity_id == report.c.id)
                     .correlate(report)
                     .as_scalar()
                     .label('partner_id'))
@@ -249,10 +248,10 @@ class SchemaPlan(ExportPlan):
                     session.query(PartnerPatient.pid)
                     .select_from(models.Partner)
                     .join(PartnerPatient, models.Partner.enrolled_patient)
-                    .join(datastore.Context,
-                          (datastore.Context.external == u'partner')
-                          & (datastore.Context.key == models.Partner.id))
-                    .filter(datastore.Context.entity_id == report.c.id)
+                    .join(models.Context,
+                          (models.Context.external == u'partner')
+                          & (models.Context.key == models.Partner.id))
+                    .filter(models.Context.entity_id == report.c.id)
                     .correlate(report)
                     .as_scalar()
                     .label('partner_pid')))
@@ -263,30 +262,30 @@ class SchemaPlan(ExportPlan):
                 .add_column(
                     session.query(models.Stratum.block_number)
                     .select_from(models.Stratum)
-                    .join(datastore.Context,
-                          (datastore.Context.external == u'stratum')
-                          & (datastore.Context.key == models.Stratum.id))
-                    .filter(datastore.Context.entity_id == report.c.id)
+                    .join(models.Context,
+                          (models.Context.external == u'stratum')
+                          & (models.Context.key == models.Stratum.id))
+                    .filter(models.Context.entity_id == report.c.id)
                     .correlate(report)
                     .as_scalar()
                     .label('block_number'))
                 .add_column(
                     session.query(models.Stratum.randid)
                     .select_from(models.Stratum)
-                    .join(datastore.Context,
-                          (datastore.Context.external == u'stratum')
-                          & (datastore.Context.key == models.Stratum.id))
-                    .filter(datastore.Context.entity_id == report.c.id)
+                    .join(models.Context,
+                          (models.Context.external == u'stratum')
+                          & (models.Context.key == models.Stratum.id))
+                    .filter(models.Context.entity_id == report.c.id)
                     .correlate(report)
                     .as_scalar()
                     .label('randid'))
                 .add_column(
                     session.query(models.Arm.title)
                     .select_from(models.Stratum)
-                    .join(datastore.Context,
-                          (datastore.Context.external == u'stratum')
-                          & (datastore.Context.key == models.Stratum.id))
-                    .filter(datastore.Context.entity_id == report.c.id)
+                    .join(models.Context,
+                          (models.Context.external == u'stratum')
+                          & (models.Context.key == models.Stratum.id))
+                    .filter(models.Context.entity_id == report.c.id)
                     .join(models.Stratum.arm)
                     .correlate(report)
                     .as_scalar()
@@ -303,31 +302,31 @@ class SchemaPlan(ExportPlan):
                 .select_from(models.Visit)
                 .join(models.Visit.cycles)
                 .join(models.Cycle.study)
-                .join(datastore.Context,
-                      (datastore.Context.external == u'visit')
-                      & (datastore.Context.key == models.Visit.id))
-                .filter(datastore.Context.entity_id == report.c.id)
-                .group_by(datastore.Context.entity_id)
+                .join(models.Context,
+                      (models.Context.external == u'visit')
+                      & (models.Context.key == models.Visit.id))
+                .filter(models.Context.entity_id == report.c.id)
+                .group_by(models.Context.entity_id)
                 .correlate(report)
                 .as_scalar()
                 .label('visit_cycles'))
             .add_column(
                 session.query(models.Visit.id)
                 .select_from(models.Visit)
-                .join(datastore.Context,
-                      (datastore.Context.external == u'visit')
-                      & (datastore.Context.key == models.Visit.id))
-                .filter(datastore.Context.entity_id == report.c.id)
+                .join(models.Context,
+                      (models.Context.external == u'visit')
+                      & (models.Context.key == models.Visit.id))
+                .filter(models.Context.entity_id == report.c.id)
                 .correlate(report)
                 .as_scalar()
                 .label('visit_id'))
             .add_column(
                 session.query(models.Visit.visit_date)
                 .select_from(models.Visit)
-                .join(datastore.Context,
-                      (datastore.Context.external == u'visit')
-                      & (datastore.Context.key == models.Visit.id))
-                .filter(datastore.Context.entity_id == report.c.id)
+                .join(models.Context,
+                      (models.Context.external == u'visit')
+                      & (models.Context.key == models.Visit.id))
+                .filter(models.Context.entity_id == report.c.id)
                 .correlate(report)
                 .as_scalar()
                 .label('visit_date'))
@@ -339,33 +338,33 @@ class SchemaPlan(ExportPlan):
         return query
 
 
-def _list_schemata_info(db_session):
-    InnerSchema = orm.aliased(datastore.Schema)
-    OuterSchema = orm.aliased(datastore.Schema)
+def _list_schemata_info(dbsession):
+    InnerSchema = orm.aliased(models.Schema)
+    OuterSchema = orm.aliased(models.Schema)
 
     schemata_query = (
-        db_session.query(OuterSchema.name.label('name'))
+        dbsession.query(OuterSchema.name.label('name'))
         .add_column(literal_column("'schema'").label('type'))
         .add_column(
-            db_session.query(datastore.Attribute)
-            .filter(datastore.Attribute.is_private)
+            dbsession.query(models.Attribute)
+            .filter(models.Attribute.is_private)
             .join(InnerSchema)
             .filter(InnerSchema.name == OuterSchema.name)
             .correlate(OuterSchema)
             .exists()
             .label('has_private'))
         .add_column(
-            db_session.query(datastore.Entity)
-            .join(datastore.Entity.contexts)
-            .filter(datastore.Context.external == 'stratum')
-            .join(models.Stratum, datastore.Context.key == models.Stratum.id)
-            .join(InnerSchema, datastore.Entity.schema)
+            dbsession.query(models.Entity)
+            .join(models.Entity.contexts)
+            .filter(models.Context.external == 'stratum')
+            .join(models.Stratum, models.Context.key == models.Stratum.id)
+            .join(InnerSchema, models.Entity.schema)
             .filter(InnerSchema.name == OuterSchema.name)
             .correlate(OuterSchema)
             .exists()
             .label('has_rand'))
         .add_column(
-            db_session.query(InnerSchema.title)
+            dbsession.query(InnerSchema.title)
             .select_from(InnerSchema)
             .filter(InnerSchema.name == OuterSchema.name)
             .filter(InnerSchema.publish_date != null())
@@ -376,7 +375,7 @@ def _list_schemata_info(db_session):
             .as_scalar()
             .label('title'))
         .add_column(
-            db_session.query(
+            dbsession.query(
                 group_concat(to_date(InnerSchema.publish_date), ';'))
             .filter(InnerSchema.name == OuterSchema.name)
             .filter(InnerSchema.publish_date != null())

@@ -5,11 +5,10 @@ from sqlalchemy import (
     text,
     Boolean, Integer, Unicode, DateTime, Sequence)
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 
+from .meta import Base
 
-Base = declarative_base()
 
 START_ID = int('222222', base=36)
 
@@ -19,7 +18,7 @@ class Site(Base):
     An originating site (e.g. organization, institution, etc) for OUR numbers
     """
 
-    __tablename__ = 'site'
+    __tablename__ = 'rostersite'
 
     id = Column(Integer, primary_key=True)
 

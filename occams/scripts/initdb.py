@@ -11,13 +11,13 @@ depending on the classification of the table.
 
 import argparse
 import sys
-from importlib import import_module
 
 from alembic.config import Config
 from alembic import command
 from sqlalchemy import create_engine
-from pyramid.paster import setup_logging, get_appsettings
-from pyramid.settings import aslist
+from pyramid.paster import setup_logging
+
+from ..models.meta import Base
 
 
 parser = argparse.ArgumentParser(description='Initialize database')
@@ -31,33 +31,15 @@ def main(argv=sys.argv):
     args = parser.parse_args(argv[1:])
 
     setup_logging(args.config)
-    app_settings = get_appsettings(args.config)
     alembic_cfg = Config(args.config)
 
     blame = alembic_cfg.get_main_option('blame')
     engine = create_engine(alembic_cfg.get_main_option('sqlalchemy.url'))
-    apps = aslist(app_settings['occams.apps'])
-    errors = []
 
     assert blame, 'Need to blame someone!'
 
     with engine.begin() as connection:
         connection.info['blame'] = blame
-
-        for app in apps:
-            try:
-                module = import_module(app)
-            except ImportError:
-                errors.append('{}: Unable to import'.format(app))
-                continue
-            else:
-                if hasattr(module, 'initdb'):
-                    module.initdb(connection)
-                else:
-                    errors.append('{}: Does not have "initdb"'.format(app))
-
-        for error in errors:
-            print(error)
-
+        Base.metadata.create_all(connection)
         alembic_cfg.attributes['connection'] = connection
         command.stamp(alembic_cfg, 'heads')

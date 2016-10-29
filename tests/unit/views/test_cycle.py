@@ -4,15 +4,15 @@ import pytest
 class TestEditJson:
 
     def _call_fut(self, *args, **kw):
-        from occams_studies.views.cycle import edit_json as view
+        from occams.views.cycle import edit_json as view
         return view(*args, **kw)
 
-    def test_add(self, req, db_session):
+    def test_add(self, req, dbsession):
         """
         It should be able to add a new cycle
         """
         from datetime import date
-        from occams_studies import models
+        from occams import models
 
         study = models.Study(
             name=u'somestudy',
@@ -21,8 +21,8 @@ class TestEditJson:
             code=u'000',
             consent_date=date.today())
 
-        db_session.add_all([study])
-        db_session.flush()
+        dbsession.add_all([study])
+        dbsession.flush()
 
         req.json_body = {
             'name': 'week-1',
@@ -35,13 +35,13 @@ class TestEditJson:
         assert 1 == study.cycles.count()
         assert 'week-1' == study.cycles[0].name
 
-    def test_enforce_unique_name(self, req, db_session):
+    def test_enforce_unique_name(self, req, dbsession):
         """
         It should make sure the name stays unique when adding new cycles
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models
+        from occams import models
 
         cycle = models.Cycle(name='week-1', title=u'Week 1', week=1)
 
@@ -53,8 +53,8 @@ class TestEditJson:
             consent_date=date.today(),
             cycles=[cycle])
 
-        db_session.add_all([study])
-        db_session.flush()
+        dbsession.add_all([study])
+        dbsession.flush()
 
         req.json_body = {
             'title': u'Week 1',
@@ -67,12 +67,12 @@ class TestEditJson:
         assert 'not yield a unique' in \
             excinfo.value.json['errors']['title'].lower()
 
-    def test_edit_unique_name(self, req, db_session):
+    def test_edit_unique_name(self, req, dbsession):
         """
         It should allow the cycle to be able to change its unique name
         """
         from datetime import date
-        from occams_studies import models
+        from occams import models
 
         cycle = models.Cycle(name='week-1', title=u'Week 1', week=1)
 
@@ -84,8 +84,8 @@ class TestEditJson:
             consent_date=date.today(),
             cycles=[cycle])
 
-        db_session.add_all([study])
-        db_session.flush()
+        dbsession.add_all([study])
+        dbsession.flush()
 
         req.json_body = {
             'name': 'somestudy',
@@ -100,16 +100,16 @@ class TestEditJson:
 class TestDeleteJson:
 
     def _call_fut(self, *args, **kw):
-        from occams_studies.views.cycle import delete_json as view
+        from occams.views.cycle import delete_json as view
         return view(*args, **kw)
 
-    def test_no_visit(self, req, db_session):
+    def test_no_visit(self, req, dbsession):
         """
         It should allow deleting of a cycle if it has no visits
         """
 
         from datetime import date
-        from occams_studies import models
+        from occams import models
 
         cycle = models.Cycle(name='week-1', title=u'Week 1', week=1)
 
@@ -121,20 +121,20 @@ class TestDeleteJson:
             consent_date=date.today(),
             cycles=[cycle])
 
-        db_session.add_all([study])
-        db_session.flush()
+        dbsession.add_all([study])
+        dbsession.flush()
 
         self._call_fut(cycle, req)
         assert 0 == study.cycles.count()
 
-    def test_has_visits(self, req, db_session, config):
+    def test_has_visits(self, req, dbsession, config):
         """
         It should not allow deletion of a cycle if it has visit
         (unless administrator)
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPForbidden
-        from occams_studies import models
+        from occams import models
 
         cycle = models.Cycle(name='week-1', title=u'Week 1', week=1)
 
@@ -158,8 +158,8 @@ class TestDeleteJson:
         visit = models.Visit(
             patient=patient, visit_date=date.today(), cycles=[cycle])
 
-        db_session.add_all([study, enrollment, visit])
-        db_session.flush()
+        dbsession.add_all([study, enrollment, visit])
+        dbsession.flush()
 
         # Should not be able to delete if not an admin
         config.testing_securitypolicy(permissive=False)

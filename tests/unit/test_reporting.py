@@ -6,7 +6,7 @@ import pytest
 import sqlalchemy as sa
 
 
-def test_datadict_published_schema(db_session):
+def test_datadict_published_schema(dbsession):
     """
     It should only generate a report for published schemata
     """
@@ -30,23 +30,23 @@ def test_datadict_published_schema(db_session):
                         type='string',
                         order=0)})})
 
-    db_session.add(schema)
-    db_session.flush()
-    columns = reporting.build_columns(db_session, u'A')
+    dbsession.add(schema)
+    dbsession.flush()
+    columns = reporting.build_columns(dbsession, u'A')
     assert 'a' not in columns
 
     schema.publish_date = date.today()
-    db_session.flush()
-    columns = reporting.build_columns(db_session, u'A')
+    dbsession.flush()
+    columns = reporting.build_columns(dbsession, u'A')
     assert 'a' in columns
 
     schema.retract_date = date.today() + timedelta(1)
-    db_session.flush()
-    columns = reporting.build_columns(db_session, u'A')
+    dbsession.flush()
+    columns = reporting.build_columns(dbsession, u'A')
     assert 'a' not in columns
 
 
-def test_datadict_multpile_versions(db_session):
+def test_datadict_multpile_versions(dbsession):
     """
     It should keep track of schema versions while generating column plans
     """
@@ -81,15 +81,15 @@ def test_datadict_multpile_versions(db_session):
     schema3.publish_date = today + timedelta(2)
     schema3.attributes['s1'].attributes['a'].title = u'prime'
 
-    db_session.add_all([schema1, schema2, schema3])
-    db_session.flush()
+    dbsession.add_all([schema1, schema2, schema3])
+    dbsession.flush()
 
-    columns = reporting.build_columns(db_session, u'A')
+    columns = reporting.build_columns(dbsession, u'A')
     assert 'a' in columns
     assert len(columns['a'].attributes) == 3
 
 
-def test_datadict_multiple_choice(db_session):
+def test_datadict_multiple_choice(dbsession):
     """
     It should retain answer choices in the columns dictionary
     """
@@ -128,10 +128,10 @@ def test_datadict_multiple_choice(db_session):
                                 title=u'Bar',
                                 order=1)})})})
 
-    db_session.add(schema1)
-    db_session.flush()
+    dbsession.add(schema1)
+    dbsession.flush()
 
-    columns = reporting.build_columns(db_session, u'A')
+    columns = reporting.build_columns(dbsession, u'A')
     assert 'a' in columns
     assert sorted(['001', '002']) == sorted(iterkeys(columns['a'].choices))
 
@@ -139,14 +139,14 @@ def test_datadict_multiple_choice(db_session):
     schema2.publish_date = today + timedelta(1)
     schema2.attributes['s1'].attributes['a'].choices['003'] = \
         models.Choice(name=u'003', title=u'Baz', order=3)
-    db_session.add(schema2)
-    db_session.flush()
-    columns = reporting.build_columns(db_session, u'A')
+    dbsession.add(schema2)
+    dbsession.flush()
+    columns = reporting.build_columns(dbsession, u'A')
     assert sorted(['001', '002', '003']) == \
         sorted(iterkeys(columns['a'].choices))
 
 
-def test_datadict_duplicate_vocabulary_term(db_session):
+def test_datadict_duplicate_vocabulary_term(dbsession):
     """
     It should use the most recent version of a choice label
     """
@@ -191,10 +191,10 @@ def test_datadict_duplicate_vocabulary_term(db_session):
     for choice in itervalues(schema2.attributes['s1'].attributes['a'].choices):
         choice.title = 'New ' + choice.title
 
-    db_session.add_all([schema1, schema2])
-    db_session.flush()
+    dbsession.add_all([schema1, schema2])
+    dbsession.flush()
 
-    columns = reporting.build_columns(db_session, u'A')
+    columns = reporting.build_columns(dbsession, u'A')
     assert '001' in columns['a'].choices
     assert '002' in columns['a'].choices
     assert 'New Foo' == columns['a'].choices['001']
@@ -207,7 +207,7 @@ def test_datadict_duplicate_vocabulary_term(db_session):
     ('text', sa.UnicodeText),
     ('number', sa.Numeric)
 ])
-def check_report_column_type(db_session, ds_type, sa_type):
+def check_report_column_type(dbsession, ds_type, sa_type):
     """
     It should normalize datastore types to SQL types
     """
@@ -231,18 +231,18 @@ def check_report_column_type(db_session, ds_type, sa_type):
                         title=u'',
                         type=ds_type,
                         order=1)})})
-    db_session.add(schema)
-    db_session.flush()
+    dbsession.add(schema)
+    dbsession.flush()
 
-    report = reporting.build_report(db_session, u'A')
-    column_type = db_session.query(report.c.a).column_descriptions[0]['type']
+    report = reporting.build_report(dbsession, u'A')
+    column_type = dbsession.query(report.c.a).column_descriptions[0]['type']
 
     assert isinstance(column_type, sa_type), \
         '%s did not covert to %s, got %s' \
         % (ds_type, str(sa_type), column_type)
 
 
-def test_build_report_expected_metadata_columns(db_session):
+def test_build_report_expected_metadata_columns(dbsession):
     """
     It should always include entity metdata in the final report query
     """
@@ -253,10 +253,10 @@ def test_build_report_expected_metadata_columns(db_session):
     today = date.today()
 
     schema = models.Schema(name=u'A', title=u'A', publish_date=today)
-    db_session.add(schema)
-    db_session.flush()
+    dbsession.add(schema)
+    dbsession.flush()
 
-    report = reporting.build_report(db_session, u'A')
+    report = reporting.build_report(dbsession, u'A')
     assert u'id' in report.c
     assert u'form_name' in report.c
     assert u'form_publish_date' in report.c
@@ -269,7 +269,7 @@ def test_build_report_expected_metadata_columns(db_session):
     assert u'modify_user' in report.c
 
 
-def test_build_report_scalar_values(db_session):
+def test_build_report_scalar_values(dbsession):
     """
     It should properly report scalar values
     """
@@ -296,21 +296,21 @@ def test_build_report_scalar_values(db_session):
                         type='string',
                         order=1)})})
 
-    db_session.add(schema1)
-    db_session.flush()
+    dbsession.add(schema1)
+    dbsession.flush()
 
     # add some entries for the schema
     entity1 = models.Entity(schema=schema1)
     entity1['a'] = u'foovalue'
-    db_session.add(entity1)
-    db_session.flush()
+    dbsession.add(entity1)
+    dbsession.flush()
 
-    report = reporting.build_report(db_session, u'A')
-    result = db_session.query(report).one()
+    report = reporting.build_report(dbsession, u'A')
+    result = dbsession.query(report).one()
     assert entity1[u'a'] == result.a
 
 
-def test_build_report_datetime(db_session):
+def test_build_report_datetime(dbsession):
     """
     It should be able to cast DATE/DATETIME
     """
@@ -335,27 +335,27 @@ def test_build_report_datetime(db_session):
                         title=u'',
                         type='date',
                         order=1)})})
-    db_session.add(schema1)
-    db_session.flush()
+    dbsession.add(schema1)
+    dbsession.flush()
 
     # add some entries for the schema
     entity1 = models.Entity(schema=schema1)
     entity1['a'] = date(1976, 7, 4)
-    db_session.add(entity1)
-    db_session.flush()
+    dbsession.add(entity1)
+    dbsession.flush()
 
-    report = reporting.build_report(db_session, u'A')
-    result = db_session.query(report).one()
+    report = reporting.build_report(dbsession, u'A')
+    result = dbsession.query(report).one()
     assert str(result.a) == '1976-07-04'
 
     schema1.attributes['s1'].attributes['a'].type = 'datetime'
-    db_session.flush()
-    report = reporting.build_report(db_session, u'A')
-    result = db_session.query(report).one()
+    dbsession.flush()
+    report = reporting.build_report(dbsession, u'A')
+    result = dbsession.query(report).one()
     assert str(result.a) == '1976-07-04 00:00:00'
 
 
-def test_build_report_choice_types(db_session):
+def test_build_report_choice_types(dbsession):
     """
     It should be able to use choice labels instead of codes.
     (for human readibily)
@@ -397,63 +397,63 @@ def test_build_report_choice_types(db_session):
                                 title=u'Blue',
                                 order=2)
                             })})})
-    db_session.add(schema1)
-    db_session.flush()
+    dbsession.add(schema1)
+    dbsession.flush()
 
     entity1 = models.Entity(schema=schema1)
     entity1['a'] = u'002'
-    db_session.add(entity1)
-    db_session.flush()
+    dbsession.add(entity1)
+    dbsession.flush()
 
     # labels off
-    report = reporting.build_report(db_session, u'A', use_choice_labels=False)
-    result = db_session.query(report).one()
+    report = reporting.build_report(dbsession, u'A', use_choice_labels=False)
+    result = dbsession.query(report).one()
     assert result.a == '002'
 
     # labels on
-    report = reporting.build_report(db_session, u'A', use_choice_labels=True)
-    result = db_session.query(report).one()
+    report = reporting.build_report(dbsession, u'A', use_choice_labels=True)
+    result = dbsession.query(report).one()
     assert result.a == 'Red'
 
     # switch to multiple-choice
     schema1.attributes['a'].is_collection = True
     entity1['a'] = ['002', '003']
-    db_session.flush()
+    dbsession.flush()
 
     # delimited multiple-choice, labels off
-    report = reporting.build_report(db_session, u'A',
+    report = reporting.build_report(dbsession, u'A',
                                     expand_collections=False,
                                     use_choice_labels=False)
-    result = db_session.query(report).one()
+    result = dbsession.query(report).one()
     assert sorted(result.a.split(';')) == sorted(['002', '003'])
 
     # delimited multiple-choice, labels on
-    report = reporting.build_report(db_session, u'A',
+    report = reporting.build_report(dbsession, u'A',
                                     expand_collections=False,
                                     use_choice_labels=True)
-    result = db_session.query(report).one()
+    result = dbsession.query(report).one()
     assert sorted(result.a.split(';')) == sorted(['Red', 'Blue'])
 
     # expanded multiple-choice, labels off
-    report = reporting.build_report(db_session, u'A',
+    report = reporting.build_report(dbsession, u'A',
                                     expand_collections=True,
                                     use_choice_labels=False)
-    result = db_session.query(report).one()
+    result = dbsession.query(report).one()
     assert result.a_001 == 0
     assert result.a_002 == 1
     assert result.a_003 == 1
 
     # expanded multiple-choice, labels on
-    report = reporting.build_report(db_session, u'A',
+    report = reporting.build_report(dbsession, u'A',
                                     expand_collections=True,
                                     use_choice_labels=True)
-    result = db_session.query(report).one()
+    result = dbsession.query(report).one()
     assert result.a_001 is None
     assert result.a_002 == 'Red'
     assert result.a_003 == 'Blue'
 
 
-def test_build_report_expand_none_selected(db_session):
+def test_build_report_expand_none_selected(dbsession):
     """
     It should leave all choices blank (not zero) on if no option was selected
     """
@@ -493,47 +493,47 @@ def test_build_report_expand_none_selected(db_session):
                                 title=u'Blue',
                                 order=2)
                             })})})
-    db_session.add(schema1)
-    db_session.flush()
+    dbsession.add(schema1)
+    dbsession.flush()
 
     entity1 = models.Entity(schema=schema1)
-    db_session.add(entity1)
-    db_session.flush()
+    dbsession.add(entity1)
+    dbsession.flush()
 
     # delimited multiple-choice, labels off
-    report = reporting.build_report(db_session, u'A',
+    report = reporting.build_report(dbsession, u'A',
                                     expand_collections=False,
                                     use_choice_labels=False)
-    result = db_session.query(report).one()
+    result = dbsession.query(report).one()
     assert result.a is None
 
     # delimited multiple-choice, labels on
-    report = reporting.build_report(db_session, u'A',
+    report = reporting.build_report(dbsession, u'A',
                                     expand_collections=False,
                                     use_choice_labels=True)
-    result = db_session.query(report).one()
+    result = dbsession.query(report).one()
     assert result.a is None
 
     # expanded multiple-choice, labels off
-    report = reporting.build_report(db_session, u'A',
+    report = reporting.build_report(dbsession, u'A',
                                     expand_collections=True,
                                     use_choice_labels=False)
-    result = db_session.query(report).one()
+    result = dbsession.query(report).one()
     assert result.a_001 is None
     assert result.a_002 is None
     assert result.a_003 is None
 
     # expanded multiple-choice, labels on
-    report = reporting.build_report(db_session, u'A',
+    report = reporting.build_report(dbsession, u'A',
                                     expand_collections=True,
                                     use_choice_labels=True)
-    result = db_session.query(report).one()
+    result = dbsession.query(report).one()
     assert result.a_001 is None
     assert result.a_002 is None
     assert result.a_003 is None
 
 
-def test_build_report_ids(db_session):
+def test_build_report_ids(dbsession):
     """
     It should be able to include only the schemata with the specified ids
     """
@@ -561,8 +561,8 @@ def test_build_report_ids(db_session):
                         type='string',
                         is_private=True,
                         order=1)})})
-    db_session.add(schema1)
-    db_session.flush()
+    dbsession.add(schema1)
+    dbsession.flush()
 
     schema2 = deepcopy(schema1)
     schema2.publish_date = today + timedelta(1)
@@ -572,21 +572,21 @@ def test_build_report_ids(db_session):
         type='string',
         is_private=True,
         order=1)
-    db_session.add(schema2)
-    db_session.flush()
+    dbsession.add(schema2)
+    dbsession.flush()
 
     # all
-    report = reporting.build_report(db_session, u'A')
+    report = reporting.build_report(dbsession, u'A')
     assert 'a' in report.c
     assert 'b' in report.c
 
     # Only v1
-    report = reporting.build_report(db_session, u'A', ids=[schema1.id])
+    report = reporting.build_report(dbsession, u'A', ids=[schema1.id])
     assert 'a' in report.c
     assert 'b' not in report.c
 
 
-def test_build_report_context(db_session):
+def test_build_report_context(dbsession):
     """
     It should be able to associate with a context. (for easier joins)
     """
@@ -613,30 +613,30 @@ def test_build_report_context(db_session):
                         type='string',
                         is_private=True,
                         order=1)})})
-    db_session.add(schema1)
-    db_session.flush()
+    dbsession.add(schema1)
+    dbsession.flush()
 
     entity1 = models.Entity(schema=schema1)
     entity1['a'] = u'002'
-    db_session.add(entity1)
-    db_session.flush()
+    dbsession.add(entity1)
+    dbsession.flush()
 
-    db_session.add(
+    dbsession.add(
         models.Context(external='sometable', key=123, entity=entity1))
-    db_session.flush()
+    dbsession.flush()
 
     # not specified
-    report = reporting.build_report(db_session, u'A')
+    report = reporting.build_report(dbsession, u'A')
     assert 'context_key' not in report.c
 
     # specified
-    report = reporting.build_report(db_session, u'A', context='sometable')
-    result = db_session.query(report).one()
+    report = reporting.build_report(dbsession, u'A', context='sometable')
+    result = dbsession.query(report).one()
     assert 'context_key' in report.c
     assert result.context_key == 123
 
 
-def test_build_report_attributes(db_session):
+def test_build_report_attributes(dbsession):
     """
     It should only include the specified columns (useful for large forms)
     """
@@ -669,15 +669,15 @@ def test_build_report_attributes(db_session):
                         is_private=True,
                         order=2)})})
 
-    db_session.add(schema1)
-    db_session.flush()
+    dbsession.add(schema1)
+    dbsession.flush()
 
-    report = reporting.build_report(db_session, u'A', attributes=['b'])
+    report = reporting.build_report(dbsession, u'A', attributes=['b'])
     assert 'a' not in report.c
     assert 'b' in report.c
 
 
-def test_build_report_ignore_private(db_session):
+def test_build_report_ignore_private(dbsession):
     """
     It should be able to de-identify private data upon request
     """
@@ -705,21 +705,21 @@ def test_build_report_ignore_private(db_session):
                         is_private=True,
                         order=1)})})
 
-    db_session.add(schema1)
-    db_session.flush()
+    dbsession.add(schema1)
+    dbsession.flush()
 
     # add some entries for the schema
     entity1 = models.Entity(schema=schema1)
     entity1['name'] = u'Jane Doe'
-    db_session.add(entity1)
-    db_session.flush()
+    dbsession.add(entity1)
+    dbsession.flush()
 
     # not de-identified
-    report = reporting.build_report(db_session, u'A', ignore_private=False)
-    result = db_session.query(report).one()
+    report = reporting.build_report(dbsession, u'A', ignore_private=False)
+    result = dbsession.query(report).one()
     assert entity1[u'name'] == result.name
 
     # de-identified
-    report = reporting.build_report(db_session, u'A', ignore_private=True)
-    result = db_session.query(report).one()
+    report = reporting.build_report(dbsession, u'A', ignore_private=True)
+    result = dbsession.query(report).one()
     assert '[PRIVATE]' == result.name

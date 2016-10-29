@@ -16,8 +16,8 @@
         <ul metal:use-macro="load: header-details.pt" />
         <nav metal:use-macro="load: header-nav.pt" />
 
-        <div metal:use-macro="load: ../form/modal-form-add.pt"></div>
-        <div metal:use-macro="load: ../form/modal-form-delete.pt"></div>
+        <div metal:use-macro="load: ../entry/modal-form-add.pt"></div>
+        <div metal:use-macro="load: ../entry/modal-form-delete.pt"></div>
         <div metal:use-macro="load: modal-visit-edit.pt"></div>
         <div metal:use-macro="load: modal-visit-delete.pt"></div>
       </header>

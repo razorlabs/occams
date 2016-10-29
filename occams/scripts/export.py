@@ -109,10 +109,10 @@ def print_list(args, env):
         return star(row.is_system), star(row.has_private), star(row.has_rand), row.name, row.title  # NOQA
 
     header = ['sys', 'priv', 'rand', 'name', 'title']
-    db_session = env['request'].db_session
-    plans = env['registry'].settings['studies.export.plans']
+    dbsession = env['request'].dbsession
+    plans = exports.plans
     rows = iter(format(e) for e in itervalues(
-        exports.list_all(plans, db_session)))
+        exports.list_all(plans, dbsession)))
     print(tabulate(rows, header, tablefmt='simple'))
 
 
@@ -128,9 +128,9 @@ def make_export(args, env):
             or args.names):
         sys.exit('You must specifiy something to export!')
 
-    db_session = env['request'].db_session
-    plans = env['registry'].settings['studies.export.plans']
-    exportables = exports.list_all(plans, db_session)
+    dbsession = env['request'].dbsession
+    plans = exports.plans
+    exportables = exports.list_all(plans, dbsession)
 
     if args.atomic:
         out_dir = '%s-%s' % (args.dir.rstrip('/'), uuid.uuid4())

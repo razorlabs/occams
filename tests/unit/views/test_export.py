@@ -4,7 +4,7 @@ import pytest
 @pytest.yield_fixture
 def check_csrf_token(config):
     import mock
-    name = 'occams_studies.views.export.check_csrf_token'
+    name = 'occams.views.export.check_csrf_token'
     with mock.patch(name) as patch:
         yield patch
 
@@ -12,17 +12,17 @@ def check_csrf_token(config):
 class TestAdd:
 
     def _call_fut(self, *args, **kw):
-        from occams_studies.views.export import checkout as view
+        from occams.views.export import checkout as view
         return view(*args, **kw)
 
-    def test_get_exportables(self, req, db_session):
+    def test_get_exportables(self, req, dbsession):
         """
         It should render only published schemata
         """
         from datetime import date
         from occams_datastore import models as datastore
-        from occams_studies import models
-        from occams_studies.exports.schema import SchemaPlan
+        from occams import models
+        from occams.exports.schema import SchemaPlan
 
         req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
 
@@ -33,37 +33,37 @@ class TestAdd:
         # Not-yet-published schemata
         schema = datastore.Schema(
             name=u'vitals', title=u'Vitals')
-        db_session.add(schema)
-        db_session.flush()
+        dbsession.add(schema)
+        dbsession.flush()
         res = self._call_fut(models.ExportFactory(req), req)
         assert len(res['exportables']) == 0
 
         # Published schemata
         schema.publish_date = date.today()
-        db_session.flush()
+        dbsession.flush()
         res = self._call_fut(models.ExportFactory(req), req)
         assert len(res['exportables']) == 1
 
-    def test_post_empty(self, req, db_session):
+    def test_post_empty(self, req, dbsession):
         """
         It should raise validation errors on empty imput
         """
         from webob.multidict import MultiDict
-        from occams_studies import models
-        from occams_studies.exports.schema import SchemaPlan
+        from occams import models
+        from occams.exports.schema import SchemaPlan
         req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
         req.method = 'POST'
         req.POST = MultiDict()
         res = self._call_fut(models.ExportFactory(req), req)
         assert res['errors'] is not None
 
-    def test_post_non_existent_schema(self, req, db_session, config):
+    def test_post_non_existent_schema(self, req, dbsession, config):
         """
         It should raise validation errors for non-existent schemata
         """
         from webob.multidict import MultiDict
-        from occams_studies import models
-        from occams_studies.exports.schema import SchemaPlan
+        from occams import models
+        from occams.exports.schema import SchemaPlan
         config.testing_securitypolicy(userid='tester', permissive=True)
         req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
         req.method = 'POST'
@@ -71,7 +71,7 @@ class TestAdd:
         res = self._call_fut(models.ExportFactory(req), req)
         assert 'not a valid choice' in res['errors']['contents']
 
-    def test_valid(self, req, db_session, config, check_csrf_token):
+    def test_valid(self, req, dbsession, config, check_csrf_token):
         """
         It should add an export record and initiate an async task
         """
@@ -80,65 +80,65 @@ class TestAdd:
         from pyramid.httpexceptions import HTTPFound
         from webob.multidict import MultiDict
         from occams_datastore import models as datastore
-        from occams_studies import models
-        from occams_studies.exports.schema import SchemaPlan
+        from occams import models
+        from occams.exports.schema import SchemaPlan
 
         req.registry.settings['app.export.dir'] = '/tmp'
         req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
 
         blame = datastore.User(key=u'joe')
-        db_session.add(blame)
-        db_session.flush()
-        db_session.info['blame'] = blame
+        dbsession.add(blame)
+        dbsession.flush()
+        dbsession.info['blame'] = blame
 
         schema = datastore.Schema(
             name=u'vitals', title=u'Vitals', publish_date=date.today())
-        db_session.add(schema)
-        db_session.flush()
+        dbsession.add(schema)
+        dbsession.flush()
 
         config.testing_securitypolicy(userid='joe')
         req.method = 'POST'
         req.POST = MultiDict([('contents', str('vitals'))])
 
         # Don't invoke subtasks
-        with mock.patch('occams_studies.tasks.make_export'):
+        with mock.patch('occams.tasks.make_export'):
             res = self._call_fut(models.ExportFactory(req), req)
 
         check_csrf_token.assert_called_with(req)
         assert isinstance(res, HTTPFound)
         assert res.location == req.route_path('studies.exports_status')
-        export = db_session.query(models.Export).one()
+        export = dbsession.query(models.Export).one()
         assert export.owner_user.key == 'joe'
 
-    def test_exceed_limit(self, req, db_session, config):
+    def test_exceed_limit(self, req, dbsession, config):
         """
         It should not let the user exceed their allocated export limit
         """
         from datetime import date
         from webob.multidict import MultiDict
         from occams_datastore import models as datastore
-        from occams_studies import models
-        from occams_studies.exports.schema import SchemaPlan
+        from occams import models
+        from occams.exports.schema import SchemaPlan
 
         config.registry.settings['app.export.limit'] = 0
         req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
 
         blame = datastore.User(key=u'joe')
-        db_session.add(blame)
-        db_session.flush()
-        db_session.info['blame'] = blame
+        dbsession.add(blame)
+        dbsession.flush()
+        dbsession.info['blame'] = blame
 
         previous_export = models.Export(
             owner_user=(
-                db_session.query(datastore.User)
+                dbsession.query(datastore.User)
                 .filter_by(key='joe')
                 .one()),
             contents=[{
                 u'name': u'vitals',
                 u'title': u'Vitals',
                 u'versions': [str(date.today())]}])
-        db_session.add(previous_export)
-        db_session.flush()
+        dbsession.add(previous_export)
+        dbsession.flush()
 
         # The renderer should know about it
         config.testing_securitypolicy(userid='joe')
@@ -155,41 +155,41 @@ class TestAdd:
 class TestStatusJSON:
 
     def _call_fut(self, *args, **kw):
-        from occams_studies.views.export import status_json as view
+        from occams.views.export import status_json as view
         return view(*args, **kw)
 
-    def test_get_current_user(self, req, db_session, config):
+    def test_get_current_user(self, req, dbsession, config):
         """
         It should return the authenticated user's exports
         """
         import mock
         from occams_datastore import models as datastore
-        from occams_studies import models
+        from occams import models
 
         req.registry.settings['studies.export.dir'] = '/tmp'
 
         blame = datastore.User(key=u'joe')
-        db_session.add(blame)
-        db_session.add(datastore.User(key='jane'))
-        db_session.flush()
-        db_session.info['blame'] = blame
+        dbsession.add(blame)
+        dbsession.add(datastore.User(key='jane'))
+        dbsession.flush()
+        dbsession.info['blame'] = blame
 
         export1 = models.Export(
             owner_user=(
-                db_session.query(datastore.User)
+                dbsession.query(datastore.User)
                 .filter_by(key='joe')
                 .one()),
             contents=[],
             status='pending')
         export2 = models.Export(
             owner_user=(
-                db_session.query(datastore.User)
+                dbsession.query(datastore.User)
                 .filter_by(key='jane')
                 .one()),
             contents=[],
             status='pending')
-        db_session.add_all([export1, export2])
-        db_session.flush()
+        dbsession.add_all([export1, export2])
+        dbsession.flush()
 
         config.testing_securitypolicy(userid='joe')
         req.redis = mock.Mock()
@@ -200,14 +200,14 @@ class TestStatusJSON:
         exports = res['exports']
         assert len(exports) == 1
 
-    def test_ignore_expired(self, req, db_session, config):
+    def test_ignore_expired(self, req, dbsession, config):
         """
         It should not render expired exports.
         """
         from datetime import datetime, timedelta
         import mock
         from occams_datastore import models as datastore
-        from occams_studies import models
+        from occams import models
 
         EXPIRE_DAYS = 10
 
@@ -215,23 +215,23 @@ class TestStatusJSON:
         req.registry.settings['studies.export.dir'] = '/tmp'
 
         blame = datastore.User(key=u'joe')
-        db_session.add(blame)
-        db_session.flush()
-        db_session.info['blame'] = blame
+        dbsession.add(blame)
+        dbsession.flush()
+        dbsession.info['blame'] = blame
 
         now = datetime.now()
 
         export = models.Export(
             owner_user=(
-                db_session.query(datastore.User)
+                dbsession.query(datastore.User)
                 .filter_by(key='joe')
                 .one()),
             contents=[],
             status='pending',
             create_date=now,
             modify_date=now)
-        db_session.add(export)
-        db_session.flush()
+        dbsession.add(export)
+        dbsession.flush()
 
         config.testing_securitypolicy(userid='joe')
         req.redis = mock.Mock()
@@ -243,7 +243,7 @@ class TestStatusJSON:
 
         export.create_date = export.modify_date = \
             now - timedelta(EXPIRE_DAYS + 1)
-        db_session.flush()
+        dbsession.flush()
         context = models.ExportFactory(req)
         export.__parent__ = context
         res = self._call_fut(context, req)
@@ -254,15 +254,15 @@ class TestStatusJSON:
 class TestNotifications:
 
     def _call_fut(self, *args, **kw):
-        from occams_studies.views.export import notifications
+        from occams.views.export import notifications
         return notifications(*args, **kw)
 
-    def test_ignore_nonmessages(self, req, db_session, config):
+    def test_ignore_nonmessages(self, req, dbsession, config):
         """
         It should not yield other types of pubsub broadcasts
         """
         import mock
-        from occams_studies import models
+        from occams import models
 
         def listen():
             return [{
@@ -278,14 +278,14 @@ class TestNotifications:
 
         assert not notifications
 
-    def test_ignore_nonowner(self, req, db_session, config):
+    def test_ignore_nonowner(self, req, dbsession, config):
         """
         It should not yield pubsub "message" broadcasts if they
         don't belong to the autheticated user.
         """
         import json
         import mock
-        from occams_studies import models
+        from occams import models
 
         config.testing_securitypolicy(userid='somoneelse')
 
@@ -303,13 +303,13 @@ class TestNotifications:
 
         assert not notifications
 
-    def test_yield_pubsub_owner_messages(self, req, db_session, config):
+    def test_yield_pubsub_owner_messages(self, req, dbsession, config):
         """
         It should only yield pubsub "message" broadcasts to the owner
         """
         import json
         import mock
-        from occams_studies import models
+        from occams import models
 
         config.testing_securitypolicy(userid='jane')
 
@@ -332,18 +332,18 @@ class TestNotifications:
 class TestCodebookJSON:
 
     def _call_fut(self, *args, **kw):
-        from occams_studies.views.export import codebook_json as view
+        from occams.views.export import codebook_json as view
         return view(*args, **kw)
 
-    def test_file_not_specified(self, req, db_session):
+    def test_file_not_specified(self, req, dbsession):
         """
         It should return 404 if the file not specified
         """
         from pyramid.httpexceptions import HTTPBadRequest
         from webob.multidict import MultiDict
         import pytest
-        from occams_studies import models
-        from occams_studies.exports.schema import SchemaPlan
+        from occams import models
+        from occams.exports.schema import SchemaPlan
 
         req.GET = MultiDict([('file', '')])
         req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
@@ -351,15 +351,15 @@ class TestCodebookJSON:
         with pytest.raises(HTTPBadRequest):
             self._call_fut(models.ExportFactory(req), req)
 
-    def test_file_not_exists(self, req, db_session):
+    def test_file_not_exists(self, req, dbsession):
         """
         It should return 404 if the file does not exist
         """
         from pyramid.httpexceptions import HTTPBadRequest
         from webob.multidict import MultiDict
         import pytest
-        from occams_studies import models
-        from occams_studies.exports.schema import SchemaPlan
+        from occams import models
+        from occams.exports.schema import SchemaPlan
 
         req.GET = MultiDict([('file', 'i_dont_exist')])
         req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
@@ -367,17 +367,17 @@ class TestCodebookJSON:
         with pytest.raises(HTTPBadRequest):
             self._call_fut(models.ExportFactory(req), req)
 
-    def test_file(self, req, db_session):
+    def test_file(self, req, dbsession):
         """
         It should return the json rows for the codebook fragment
         """
         from datetime import date
         from webob.multidict import MultiDict
         from occams_datastore import models as datastore
-        from occams_studies import models
-        from occams_studies.exports.schema import SchemaPlan
+        from occams import models
+        from occams.exports.schema import SchemaPlan
 
-        db_session.add(datastore.Schema(
+        dbsession.add(datastore.Schema(
             name=u'aform',
             title=u'',
             publish_date=date.today(),
@@ -390,7 +390,7 @@ class TestCodebookJSON:
                     )
             }
         ))
-        db_session.flush()
+        dbsession.flush()
 
         req.GET = MultiDict([('file', 'aform')])
         req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
@@ -401,17 +401,17 @@ class TestCodebookJSON:
 class TestCodebookDownload:
 
     def _call_fut(self, *args, **kw):
-        from occams_studies.views.export import codebook_download as view
+        from occams.views.export import codebook_download as view
         return view(*args, **kw)
 
-    def test_download(self, req, db_session, config):
+    def test_download(self, req, dbsession, config):
         """
         It should allow downloading of entire codebook file
         """
         import os
         from pyramid.response import FileResponse
-        from occams_studies.exports.codebook import FILE_NAME
-        from occams_studies import models
+        from occams.exports.codebook import FILE_NAME
+        from occams import models
         req.registry.settings['studies.export.dir'] = '/tmp'
         name = '/tmp/' + FILE_NAME
         with open(name, 'w+b'):
@@ -424,75 +424,75 @@ class TestCodebookDownload:
 class TestDelete:
 
     def _call_fut(self, *args, **kw):
-        from occams_studies.views.export import delete_json as view
+        from occams.views.export import delete_json as view
         return view(*args, **kw)
 
-    def test_delete(self, req, db_session, config, check_csrf_token):
+    def test_delete(self, req, dbsession, config, check_csrf_token):
         """
         It should allow the owner of the export to cancel/delete the export
         """
         import mock
         from pyramid.httpexceptions import HTTPOk
         from occams_datastore import models as datastore
-        from occams_studies import models
+        from occams import models
 
         blame = datastore.User(key=u'joe')
-        db_session.add(blame)
-        db_session.flush()
-        db_session.info['blame'] = blame
+        dbsession.add(blame)
+        dbsession.flush()
+        dbsession.info['blame'] = blame
 
         export = models.Export(
             owner_user=(
-                db_session.query(datastore.User)
+                dbsession.query(datastore.User)
                 .filter_by(key='joe')
                 .one()),
             contents=[],
             status='complete')
-        db_session.add(export)
-        db_session.flush()
+        dbsession.add(export)
+        dbsession.flush()
         export_id = export.id
         export_name = export.name
-        db_session.expunge_all()
+        dbsession.expunge_all()
 
         config.testing_securitypolicy(userid='joe')
-        with mock.patch('occams_studies.tasks.app.control.revoke') as revoke:
+        with mock.patch('occams.tasks.app.control.revoke') as revoke:
             res = self._call_fut(export, req)
         check_csrf_token.assert_called_with(req)
         assert isinstance(res, HTTPOk)
-        assert db_session.query(models.Export).get(export_id) is None
+        assert dbsession.query(models.Export).get(export_id) is None
         revoke.assert_called_with(export_name)
 
 
 class TestDownload:
 
     def _call_fut(self, *args, **kw):
-        from occams_studies.views.export import download as view
+        from occams.views.export import download as view
         return view(*args, **kw)
 
     @pytest.mark.parametrize('status', ['failed', 'pending'])
-    def test_get_not_found_status(self, req, db_session, status):
+    def test_get_not_found_status(self, req, dbsession, status):
         """
         It should return 404 if the record is not ready
         """
         from pyramid.httpexceptions import HTTPBadRequest
         from occams_datastore import models as datastore
-        from occams_studies import models
+        from occams import models
 
         blame = datastore.User(key=u'joe')
-        db_session.add(blame)
-        db_session.flush()
-        db_session.info['blame'] = blame
+        dbsession.add(blame)
+        dbsession.flush()
+        dbsession.info['blame'] = blame
 
         export = models.Export(
             id=123,
             owner_user=(
-                db_session.query(datastore.User)
+                dbsession.query(datastore.User)
                 .filter_by(key='joe')
                 .one()),
             contents=[],
             status=status)
-        db_session.add(export)
-        db_session.flush()
+        dbsession.add(export)
+        dbsession.flush()
 
         with pytest.raises(HTTPBadRequest):
             self._call_fut(export, req)

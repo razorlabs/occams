@@ -23,12 +23,13 @@ def includeme(config):
     config.add_webasset('occams-js', Bundle(
         # Dependency javascript libraries must be loaded in a specific order
         rel('bower_components/jquery/dist/jquery.min.js'),
+        rel('bower_components/jquery-ui/jquery-ui.min.js'),
         rel('bower_components/bootstrap/dist/js/bootstrap.min.js'),
-        Bundle(rel('bower_components/jquery-cookie/jquery.cookie.js'), filters='jsmin'),
+        # Bundle(rel('bower_components/jquery-cookie/jquery.cookie.js'), filters='rjsmin'),
+         Bundle(rel('bower_components/jquery-cookie/jquery.cookie.js')),
         rel('bower_components/jquery-validate/dist/jquery.validate.min.js'),
-        rel('bower_components/bootstrap/dist/js/bootstrap.min.js'),
         rel('bower_components/knockout/dist/knockout.js'),
-        rel('bower_components/knockout-sortable/build/knockout-sortable.min.js'),
+        rel('bower_components/knockout-sortable/build/knockout-sortable.js'),
         rel('bower_components/select2/select2.min.js'),
         rel('bower_components/moment/min/moment.min.js'),
         rel('bower_components/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js'),
@@ -38,8 +39,9 @@ def includeme(config):
         Bundle(
             *[os.path.join(root, filename)
                 for root, dirnames, filenames in os.walk(scriptsdir)
-                for filename in filenames if filename.endswith('.js')],
-            filters='jsmin'),
+                for filename in filenames if filename.endswith('.js')]
+            ),
+            # filters='rjsmin'),
         output=rel('gen/occams.%(version)s.js')))
 
     config.add_webasset('occams-css', Bundle(

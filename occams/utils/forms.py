@@ -90,7 +90,7 @@ class ModelField(wtforms.Field):
 
     def __init__(self, *args, **kwargs):
         self.class_ = kwargs.pop('class_')
-        self.db_session = kwargs.pop('db_session')
+        self.dbsession = kwargs.pop('dbsession')
         super(ModelField, self).__init__(*args, **kwargs)
 
     def _value(self):
@@ -109,7 +109,7 @@ class ModelField(wtforms.Field):
                 raise wtforms.validators.StopValidation(
                     self.gettext(u'Invalid value'))
             else:
-                self.data = self.db_session.query(self.class_).get(id_)
+                self.data = self.dbsession.query(self.class_).get(id_)
                 if not self.data:
                     raise wtforms.validators.StopValidation(
                         self.gettext(u'Value not found'))

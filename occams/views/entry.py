@@ -8,31 +8,28 @@ import wtforms
 from wtforms.ext.dateutil.fields import DateField
 from wtforms_components import DateRange
 
-from occams.utils.forms import wtferrors, ModelField, Form
-from occams_datastore import models as datastore
-from occams_forms.renderers import \
-    make_form, render_form, entity_data, \
-    form2json, version2json
 
 from .. import _, models
+from ..utils.forms import wtferrors, ModelField, Form
+from ..renderers import make_form, render_form, entity_data, form2json, version2json
 
 
 def list_json(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     external = context.__parent__
 
     query = (
-        db_session.query(datastore.Entity)
+        dbsession.query(models.Entity)
         .options(orm.joinedload('schema'), orm.joinedload('state'))
-        .join(datastore.Schema)
-        .join(datastore.Context)
+        .join(models.Schema)
+        .join(models.Context)
         .filter_by(external=external.__tablename__, key=external.id)
         # Do not show PHI forms since there are dedicated tabs for them
-        .filter(~datastore.Schema.id.in_(
-            db_session.query(models.patient_schema_table.c.schema_id)
+        .filter(~models.Schema.id.in_(
+            dbsession.query(models.patient_schema_table.c.schema_id)
             .subquery()))
-        .order_by(datastore.Schema.name, datastore.Entity.collect_date))
+        .order_by(models.Schema.name, models.Entity.collect_date))
 
     def fake_traverse(entity):
         entity.__parent__ = context
@@ -129,7 +126,7 @@ def available_schemata(context, request):
         grouped -- (optional) groups all results by schema name
 
     """
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     class SearchForm(Form):
         term = wtforms.StringField()
@@ -140,26 +137,26 @@ def available_schemata(context, request):
     form.validate()
 
     query = (
-        db_session.query(datastore.Schema)
+        dbsession.query(models.Schema)
         # only allow forms that are available to active studies
         .join(models.study_schema_table)
         .join(models.Study)
-        .filter(datastore.Schema.retract_date == sa.null()))
+        .filter(models.Schema.retract_date == sa.null()))
 
     if form.schema.data:
-        query = query.filter(datastore.Schema.name == form.schema.data)
+        query = query.filter(models.Schema.name == form.schema.data)
 
     if form.term.data:
         wildcard = u'%' + form.term.data + u'%'
         query = query.filter(
-            datastore.Schema.title.ilike(wildcard)
-            | sa.cast(datastore.Schema.publish_date,
+            models.Schema.title.ilike(wildcard)
+            | sa.cast(models.Schema.publish_date,
                       sa.Unicode).ilike(wildcard))
 
     query = (
         query.order_by(
-            datastore.Schema.title,
-            datastore.Schema.publish_date.asc())
+            models.Schema.title,
+            models.Schema.publish_date.asc())
         .limit(100))
 
     if form.grouped.data:
@@ -190,7 +187,7 @@ def markup_ajax(context, request):
     This usually happens when a user has requested a different version
     of the form that they are trying to enter.
     """
-    db_session = request.db_session
+    dbsession = request.dbsession
     version = request.GET.get('version')
     if not version:
         raise HTTPBadRequest()
@@ -199,11 +196,11 @@ def markup_ajax(context, request):
         schema = context.schema
     else:
         schema = (
-            db_session.query(datastore.Schema)
+            dbsession.query(models.Schema)
             .filter_by(name=context.schema.name, publish_date=version)
             .one())
         data = None
-    Form = make_form(db_session, schema, show_metadata=False)
+    Form = make_form(dbsession, schema, show_metadata=False)
     form = Form(request.POST, data=data)
     return render_form(form)
 
@@ -222,29 +219,29 @@ def markup_ajax(context, request):
     renderer='json')
 def add_json(context, request):
     check_csrf_token(request)
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     def check_study_form(form, field):
         if isinstance(context.__parent__, models.Patient):
             query = (
-                db_session.query(datastore.Schema)
+                dbsession.query(models.Schema)
                 .join(models.study_schema_table)
                 .join(models.Study)
-                .filter(datastore.Schema.id == field.data.id))
-            (exists,) = db_session.query(query.exists()).one()
+                .filter(models.Schema.id == field.data.id))
+            (exists,) = dbsession.query(query.exists()).one()
             if not exists:
                 raise wtforms.ValidationError(request.localizer.translate(
                     _(u'This form is not assosiated with a study')))
         elif isinstance(context.__parent__, models.Visit):
             query = (
-                db_session.query(models.Visit)
+                dbsession.query(models.Visit)
                 .filter(models.Visit.id == context.__parent__.id)
                 .join(models.Visit.cycles)
                 .join(models.Cycle.study)
                 .filter(
                     models.Cycle.schemata.any(id=field.data.id)
                     | models.Study.schemata.any(id=field.data.id)))
-            (exists,) = db_session.query(query.exists()).one()
+            (exists,) = dbsession.query(query.exists()).one()
             if not exists:
                 raise wtforms.ValidationError(request.localizer.translate(
                     _('${schema} is not part of the studies for this visit'),
@@ -252,8 +249,8 @@ def add_json(context, request):
 
     class AddForm(Form):
         schema = ModelField(
-            db_session=db_session,
-            class_=datastore.Schema,
+            dbsession=dbsession,
+            class_=models.Schema,
             validators=[
                 wtforms.validators.InputRequired(),
                 check_study_form])
@@ -269,11 +266,11 @@ def add_json(context, request):
         raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
     default_state = (
-        db_session.query(datastore.State)
+        dbsession.query(models.State)
         .filter_by(name='pending-entry')
         .one())
 
-    entity = datastore.Entity(
+    entity = models.Entity(
         schema=form.schema.data,
         collect_date=form.collect_date.data,
         state=default_state)
@@ -288,7 +285,7 @@ def add_json(context, request):
         next = request.current_route_path(
             _route_name='studies.patient_form', form=entity.id)
 
-    db_session.flush()
+    dbsession.flush()
 
     request.session.flash(
         _('Successfully added new ${form}',
@@ -315,13 +312,13 @@ def bulk_delete_json(context, request):
     Deletes forms in bulk
     """
     check_csrf_token(request)
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     class DeleteForm(Form):
         forms = wtforms.FieldList(
             ModelField(
-                db_session=db_session,
-                class_=datastore.Entity),
+                dbsession=dbsession,
+                class_=models.Entity),
             validators=[
                 wtforms.validators.DataRequired()])
 
@@ -335,14 +332,14 @@ def bulk_delete_json(context, request):
     external = context.__parent__.__tablename__
     key = context.__parent__.id
 
-    (db_session.query(datastore.Entity)
-        .filter(datastore.Entity.id.in_(
-            db_session.query(datastore.Context.entity_id)
-            .filter(datastore.Context.entity_id.in_(entity_ids))
-            .filter(datastore.Context.external == external)
-            .filter(datastore.Context.key == key)))
+    (dbsession.query(models.Entity)
+        .filter(models.Entity.id.in_(
+            dbsession.query(models.Context.entity_id)
+            .filter(models.Context.entity_id.in_(entity_ids))
+            .filter(models.Context.external == external)
+            .filter(models.Context.key == key)))
         .delete('fetch'))
 
-    db_session.flush()
+    dbsession.flush()
 
     return HTTPOk()

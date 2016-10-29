@@ -5,7 +5,7 @@
         <p>
           <button class="btn btn-primary"
               data-bind=" click: startAddPatient"
-              tal:define="models import:occams_studies.models"
+              tal:define="models import:occams.models"
               tal:condition="request.has_permission('add', models.PatientFactory(request))">
             <span class="fa fa-user"></span>
             <span i18n:translate="">Add Patient</span>
@@ -56,7 +56,7 @@
       <div id="studies-section" class="col-sm-8" style="display: none;" data-bind="visible: isReady">
         <p class="clearfix">
           <button
-              tal:define="models import:occams_studies.models"
+              tal:define="models import:occams.models"
               tal:condition="request.has_permission('add', models.StudyFactory(request))"
               class="btn btn-default pull-right"
               data-bind="click: startAddStudy"><span class="fa fa-mortar-board"></span> Add Study</button>

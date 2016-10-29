@@ -22,8 +22,8 @@ import redis
 import sqlalchemy as sa
 from sqlalchemy import orm
 
-from occams_datastore import models
-from occams_datastore.models.events import register
+from . import models
+from .models.events import register
 
 
 app = Celery(__name__)
@@ -155,7 +155,7 @@ def on_celeryd_init(**kw):
     # Attempt to add the user via raw engine connection, using the scoped
     # session leaves it in a dangerous non-thread-local state as we're
     # still in the parent setup process
-    throw_away_engine = sa.engine_from_config(settings, 'occams.db.')
+    throw_away_engine = sa.engine_from_config(settings)
     with throw_away_engine.begin() as connection:
         try:
             connection.execute(models.User.__table__.insert(),  key=app.userid)
@@ -164,7 +164,7 @@ def on_celeryd_init(**kw):
     throw_away_engine.dispose()
 
     # Configure the session with an untainted engine
-    engine = sa.engine_from_config(settings, 'occams.db.')
+    engine = sa.engine_from_config(settings)
     Session.configure(bind=engine)
 
 

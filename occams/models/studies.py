@@ -9,75 +9,13 @@ from sqlalchemy import orm
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 
-from occams_datastore import models as datastore
-from occams_datastore.utils.sql import JSON
-
-
-class StudiesModel(datastore.Base):
-    __abstract__ = True
-    # TODO: move this to 'studies' schema'
-    metadata = sa.MetaData()
-
-
-class groups:
-    """
-    Generates the OCCAMS-compatble group names that distinguaish site-level
-    permissions.
-
-    There are "dynamic" constants.
-
-    The purpose of this utility is that there are no silent errors if the
-    site/group names are mispelled (instead we'll get a synax error).
-    """
-
-    @staticmethod
-    def principal(site=None, group=None):
-        """
-        Generates the principal name used internally by this application
-        Supported keyword parameters are:
-            site --  The site code
-            group -- The group name
-        """
-        return site.name + ':' + group if site else group
-
-    @staticmethod
-    def administrator():
-        return groups.principal(group='administrator')
-
-    @staticmethod
-    def manager(site=None):
-        return groups.principal(site=site, group='manager')
-
-    @staticmethod
-    def coordinator(site=None):
-        return groups.principal(site=site, group='coordinator')
-
-    @staticmethod
-    def reviewer(site=None):
-        return groups.principal(site=site, group='reviewer')
-
-    @staticmethod
-    def enterer(site=None):
-        return groups.principal(site=site, group='enterer')
-
-    @staticmethod
-    def consumer(site=None):
-        return groups.principal(site=site, group='consumer')
-
-    @staticmethod
-    def member(site=None):
-        return groups.principal(site=site, group='member')
-
-
-class RootFactory(dict):
-
-    __acl__ = [
-        (Allow, groups.administrator(), ALL_PERMISSIONS),
-        (Allow, Authenticated, 'view')
-        ]
-
-    def __init__(self, request):
-        self.request = request
+from .groups import groups
+from .meta import Base
+from .auditing import Auditable
+from .metadata import Referenceable, Describeable, Modifiable, User
+from .schema import Schema
+from .storage import Entity, State, HasEntities
+from ..utils.sql import JSON
 
 
 class StudyFactory(object):
@@ -92,9 +30,9 @@ class StudyFactory(object):
         self.request = request
 
     def __getitem__(self, key):
-        db_session = self.request.db_session
+        dbsession = self.request.dbsession
         try:
-            study = db_session.query(Study).filter_by(name=key).one()
+            study = dbsession.query(Study).filter_by(name=key).one()
         except orm.exc.NoResultFound:
             raise KeyError
         study.__parent__ = self
@@ -104,7 +42,7 @@ class StudyFactory(object):
 # Configured forms for the study
 study_schema_table = sa.Table(
     'study_schema',
-    StudiesModel.metadata,
+    Base.metadata,
     sa.Column(
         'study_id',
         sa.Integer(),
@@ -117,7 +55,7 @@ study_schema_table = sa.Table(
         'schema_id',
         sa.Integer(),
         sa.ForeignKey(
-            datastore.Schema.id,
+            Schema.id,
             name='fk_study_schema_schema_id',
             ondelete='CASCADE'),
         primary_key=True))
@@ -126,7 +64,7 @@ study_schema_table = sa.Table(
 # Configured forms for the cycle
 cycle_schema_table = sa.Table(
     'cycle_schema',
-    StudiesModel.metadata,
+    Base.metadata,
     sa.Column(
         'cycle_id',
         sa.Integer(),
@@ -139,17 +77,17 @@ cycle_schema_table = sa.Table(
         'schema_id',
         sa.Integer(),
         sa.ForeignKey(
-            datastore.Schema.id,
+            Schema.id,
             name='fk_cycle_schema_schema_id',
             ondelete='CASCADE'),
         primary_key=True))
 
 
-class Study(StudiesModel,
-            datastore.Referenceable,
-            datastore.Describeable,
-            datastore.Modifiable,
-            datastore.Auditable):
+class Study(Base,
+            Referenceable,
+            Describeable,
+            Modifiable,
+            Auditable):
 
     __tablename__ = 'study'
 
@@ -188,13 +126,13 @@ class Study(StudiesModel,
     randomization_schema_id = sa.Column(sa.Integer())
 
     randomization_schema = orm.relationship(
-        datastore.Schema,
+        Schema,
         foreign_keys=[randomization_schema_id])
 
     termination_schema_id = sa.Column(sa.Integer())
 
     termination_schema = orm.relationship(
-        datastore.Schema,
+        Schema,
         foreign_keys=[termination_schema_id])
 
     is_blinded = sa.Column(
@@ -219,7 +157,7 @@ class Study(StudiesModel,
     # arms backref'd from arms
 
     schemata = orm.relationship(
-        datastore.Schema,
+        Schema,
         secondary=study_schema_table,
         collection_class=set)
 
@@ -230,8 +168,8 @@ class Study(StudiesModel,
             factory = ExternalServiceFactory
         else:
             return None
-        db_session = orm.object_session(self)
-        return factory(db_session.info['request'], self)
+        dbsession = orm.object_session(self)
+        return factory(dbsession.info['request'], self)
 
     def check(self, reference_number):
         if not self.reference_pattern:
@@ -247,14 +185,14 @@ class Study(StudiesModel,
             sa.Index('ix_%s_code' % cls.__tablename__, 'code'),
             sa.ForeignKeyConstraint(
                 columns=['randomization_schema_id'],
-                refcolumns=[datastore.Schema.id],
+                refcolumns=[Schema.id],
                 name='fk_%s_randomization_schema_id' % cls.__tablename__,
                 ondelete='SET NULL'),
             sa.Index('ix_%s_randomization_schema_id',
                      'randomization_schema_id'),
             sa.ForeignKeyConstraint(
                 columns=['termination_schema_id'],
-                refcolumns=[datastore.Schema.id],
+                refcolumns=[Schema.id],
                 name='fk_%s_termination_schema_id' % cls.__tablename__,
                 ondelete='SET NULL'),
             sa.Index('ix_%s_termination_schema_id', 'termination_schema_id'),
@@ -280,20 +218,20 @@ class CycleFactory(object):
         self.__parent__ = parent
 
     def __getitem__(self, key):
-        db_session = self.request.db_session
+        dbsession = self.request.dbsession
         try:
-            cycle = db_session.query(Cycle).filter_by(name=key).one()
+            cycle = dbsession.query(Cycle).filter_by(name=key).one()
         except orm.exc.NoResultFound:
             raise KeyError
         cycle.__parent__ = self
         return cycle
 
 
-class Cycle(StudiesModel,
-            datastore.Referenceable,
-            datastore.Describeable,
-            datastore.Modifiable,
-            datastore.Auditable):
+class Cycle(Base,
+            Referenceable,
+            Describeable,
+            Modifiable,
+            Auditable):
     """
     Study schedule represented as week cycles
     """
@@ -323,7 +261,7 @@ class Cycle(StudiesModel,
     # visits backref'd from visit
 
     schemata = orm.relationship(
-        datastore.Schema,
+        Schema,
         secondary=cycle_schema_table,
         collection_class=set)
 
@@ -347,11 +285,11 @@ class Cycle(StudiesModel,
                 cls.__tablename__))
 
 
-class Arm(StudiesModel,
-          datastore.Referenceable,
-          datastore.Describeable,
-          datastore.Modifiable,
-          datastore.Auditable):
+class Arm(Base,
+          Referenceable,
+          Describeable,
+          Modifiable,
+          Auditable):
     """
     A group of study strata
     """
@@ -397,11 +335,11 @@ class ExternalServiceFactory(object):
         self.__parent__ = parent
 
     def __getitem__(self, key):
-        db_session = self.request.db_session
+        dbsession = self.request.dbsession
         study = self.__parent__
         try:
             service = (
-                db_session.query(ExternalService)
+                dbsession.query(ExternalService)
                 .filter_by(study=study, name=key)
                 .one())
         except orm.exc.NoResultFound:
@@ -411,11 +349,11 @@ class ExternalServiceFactory(object):
             return service
 
 
-class ExternalService(StudiesModel,
-                      datastore.Referenceable,
-                      datastore.Describeable,
-                      datastore.Modifiable,
-                      datastore.Auditable):
+class ExternalService(Base,
+                      Referenceable,
+                      Describeable,
+                      Modifiable,
+                      Auditable):
     """
     A way to dynamically link participant to external services
     """
@@ -452,7 +390,7 @@ class PatientFactory(object):
 
     @property
     def __acl__(self):
-        db_session = self.request.db_session
+        dbsession = self.request.dbsession
 
         acl = [
             (Allow, groups.administrator(), ALL_PERMISSIONS),
@@ -462,7 +400,7 @@ class PatientFactory(object):
         # Grant access to any member of any site and
         # filter patients within the view listing based
         # on which sites the user has access.
-        for site in db_session.query(Site):
+        for site in dbsession.query(Site):
             acl.extend([
                 (Allow, groups.coordinator(site), ('view', 'add')),
                 (Allow, groups.enterer(site), ('view', 'add')),
@@ -479,10 +417,10 @@ class PatientFactory(object):
         self.request = request
 
     def __getitem__(self, key):
-        db_session = self.request.db_session
+        dbsession = self.request.dbsession
         try:
             patient = (
-                db_session.query(Patient)
+                dbsession.query(Patient)
                 .options(orm.joinedload('site'))
                 .filter_by(pid=key)
                 .one())
@@ -513,20 +451,20 @@ class SiteFactory(object):
         self.request = request
 
     def __getitem__(self, key):
-        db_session = self.request.db_session
+        dbsession = self.request.dbsession
         try:
-            site = db_session.query(Site).filter_by(name=key).one()
+            site = dbsession.query(Site).filter_by(name=key).one()
         except orm.exc.NoResultFound:
             raise KeyError
         site.__parent__ = self
         return site
 
 
-class Site(StudiesModel,
-           datastore.Referenceable,
-           datastore.Describeable,
-           datastore.Modifiable,
-           datastore.Auditable):
+class Site(Base,
+           Referenceable,
+           Describeable,
+           Modifiable,
+           Auditable):
     """
     A facility within an organization
     """
@@ -561,22 +499,22 @@ class Site(StudiesModel,
 # Configured forms to add to a patient (globally)
 patient_schema_table = sa.Table(
     'patient_schema',
-    StudiesModel.metadata,
+    Base.metadata,
     sa.Column(
         'schema_id',
         sa.Integer(),
         sa.ForeignKey(
-            datastore.Schema.id,
+            Schema.id,
             name='fk_patient_schema_schema_id',
             ondelete='CASCADE'),
         primary_key=True))
 
 
-class Patient(StudiesModel,
-              datastore.Referenceable,
-              datastore.Modifiable,
-              datastore.HasEntities,
-              datastore.Auditable):
+class Patient(Base,
+              Referenceable,
+              Modifiable,
+              HasEntities,
+              Auditable):
 
     __tablename__ = 'patient'
 
@@ -627,14 +565,14 @@ class Patient(StudiesModel,
     # visits backref'd from visit
 
     def __getitem__(self, key):
-        db_session = orm.object_session(self)
-        request = db_session.info['request']
+        dbsession = orm.object_session(self)
+        request = dbsession.info['request']
         if key == 'enrollments':
             return EnrollmentFactory(request, self)
         elif key == 'visits':
             return VisitFactory(request, self)
         elif key == 'forms':
-            return FormFactory(request, self)
+            return EntryFactory(request, self)
         raise KeyError
 
     @declared_attr
@@ -661,20 +599,20 @@ class ReferenceTypeFactory(object):
         self.request = request
 
     def __getitem__(self, key):
-        db_session = self.request.db_session
+        dbsession = self.request.dbsession
         try:
             reference_type = (
-                db_session.query(ReferenceType).filter_by(name=key).one())
+                dbsession.query(ReferenceType).filter_by(name=key).one())
         except orm.exc.NoResultFound:
             raise KeyError
         reference_type.__parent__ = self
         return reference_type
 
 
-class ReferenceType(StudiesModel,
-                    datastore.Referenceable,
-                    datastore.Describeable,
-                    datastore.Modifiable):
+class ReferenceType(Base,
+                    Referenceable,
+                    Describeable,
+                    Modifiable):
     """
     Reference type sources
     """
@@ -703,10 +641,10 @@ class ReferenceType(StudiesModel,
             )
 
 
-class PatientReference(StudiesModel,
-                       datastore.Referenceable,
-                       datastore.Modifiable,
-                       datastore.Auditable):
+class PatientReference(Base,
+                       Referenceable,
+                       Modifiable,
+                       Auditable):
     """
     References to a studies subject from other sources
     """
@@ -751,66 +689,6 @@ class PatientReference(StudiesModel,
                 name=u'uq_%s_reference' % cls.__tablename__))
 
 
-class Partner(StudiesModel,
-              datastore.Referenceable,
-              datastore.Modifiable,
-              datastore.HasEntities,
-              datastore.Auditable):
-    """
-    A subject's partner.
-    """
-
-    __tablename__ = 'partner'
-
-    patient_id = sa.Column(sa.Integer, nullable=False)
-
-    patient = orm.relationship(
-        Patient,
-        primaryjoin=(patient_id == Patient.id),
-        backref=orm.backref(
-            name='partners',
-            cascade='all, delete-orphan'),
-        doc=u'The Patient that reported this partner.')
-
-    enrolled_patient_id = sa.Column(sa.Integer)
-
-    # One-way ORM orm.relationship
-    enrolled_patient = orm.relationship(
-        Patient,
-        primaryjoin=(enrolled_patient_id == Patient.id),
-        # Setup the backref for back-populate cascade
-        backref=orm.backref(name='from_partners'),
-        doc=u'This partner is also a patient; This property references that'
-            u'patient entry')
-
-    # The date upon which the data was reported
-    report_date = sa.Column(
-        sa.Date,
-        nullable=False,
-        doc=u'The date that the reporting patient reported this partner')
-
-    @declared_attr
-    def __table_args__(cls):
-        return (
-            sa.ForeignKeyConstraint(
-                columns=['patient_id'],
-                refcolumns=['patient.id'],
-                name='fk_%s_patient_id' % cls.__tablename__,
-                ondelete='CASCADE',
-                ),
-            sa.ForeignKeyConstraint(
-                columns=['enrolled_patient_id'],
-                refcolumns=['patient.id'],
-                name='fk_%s_enrolled_patient_id' % cls.__tablename__,
-                ondelete='SET NULL',
-                ),
-            sa.Index('ix_%s_patient_id' % cls.__tablename__, 'patient_id'),
-            sa.Index(
-                'ix_%s_enrolled_patient_id' % cls.__tablename__,
-                'enrolled_patient_id'),
-            sa.Index('ix_%s_report_date' % cls.__tablename__, 'report_date'))
-
-
 class EnrollmentFactory(object):
 
     @property
@@ -830,10 +708,10 @@ class EnrollmentFactory(object):
         self.__parent__ = parent
 
     def __getitem__(self, key):
-        db_session = self.request.db_session
+        dbsession = self.request.dbsession
         try:
             enrollment = (
-                db_session.query(Enrollment)
+                dbsession.query(Enrollment)
                 .options(orm.joinedload('patient').joinedload('site'))
                 .filter_by(id=key).one())
         except orm.exc.NoResultFound:
@@ -845,22 +723,22 @@ class EnrollmentFactory(object):
 # Configured forms for termination
 termination_schema_table = sa.Table(
     'termination_schema',
-    StudiesModel.metadata,
+    Base.metadata,
     sa.Column(
         'schema_id',
         sa.Integer(),
         sa.ForeignKey(
-            datastore.Schema.id,
+            Schema.id,
             name='fk_termination_schema_schema_id',
             ondelete='CASCADE'),
         primary_key=True))
 
 
-class Enrollment(StudiesModel,
-                 datastore.Referenceable,
-                 datastore.Modifiable,
-                 datastore.HasEntities,
-                 datastore.Auditable):
+class Enrollment(Base,
+                 Referenceable,
+                 Modifiable,
+                 HasEntities,
+                 Auditable):
     """
     A patient's participation in a study.
     """
@@ -959,11 +837,11 @@ class Enrollment(StudiesModel,
                 name='ck_%s_lifespan' % cls.__tablename__))
 
 
-class Stratum(StudiesModel,
-              datastore.Referenceable,
-              datastore.Modifiable,
-              datastore.HasEntities,
-              datastore.Auditable):
+class Stratum(Base,
+              Referenceable,
+              Modifiable,
+              HasEntities,
+              Auditable):
     """
     A possible study enrollment assignement.
     Useful for enrolling randomized patients.
@@ -1073,14 +951,14 @@ class VisitFactory(object):
         self.__parent__ = parent
 
     def __getitem__(self, key):
-        db_session = self.request.db_session
+        dbsession = self.request.dbsession
         try:
             key = datetime.strptime(key, '%Y-%m-%d').date()
         except ValueError:
             raise KeyError
         try:
             visit = (
-                db_session.query(Visit)
+                dbsession.query(Visit)
                 .options(orm.joinedload('patient').joinedload('site'))
                 .filter_by(patient=self.__parent__)
                 .filter_by(visit_date=key)
@@ -1093,7 +971,7 @@ class VisitFactory(object):
 
 visit_cycle_table = sa.Table(
     'visit_cycle',
-    StudiesModel.metadata,
+    Base.metadata,
     sa.Column(
         'visit_id',
         sa.Integer,
@@ -1112,11 +990,11 @@ visit_cycle_table = sa.Table(
         primary_key=True))
 
 
-class Visit(StudiesModel,
-            datastore.Referenceable,
-            datastore.Modifiable,
-            datastore.HasEntities,
-            datastore.Auditable):
+class Visit(Base,
+            Referenceable,
+            Modifiable,
+            HasEntities,
+            Auditable):
 
     __tablename__ = 'visit'
 
@@ -1158,8 +1036,8 @@ class Visit(StudiesModel,
 
     def __getitem__(self, key):
         if key == 'forms':
-            db_session = orm.object_session(self)
-            return FormFactory(db_session.info['request'], self)
+            dbsession = orm.object_session(self)
+            return EntryFactory(dbsession.info['request'], self)
 
     @declared_attr
     def __table_args__(cls):
@@ -1175,7 +1053,7 @@ class Visit(StudiesModel,
                 name='uq_%s_patient_id_visit_date' % cls.__tablename__))
 
 
-class FormFactory(object):
+class EntryFactory(object):
 
     @property
     def __acl__(self):
@@ -1199,10 +1077,10 @@ class FormFactory(object):
         self.__parent__ = parent
 
     def __getitem__(self, key):
-        db_session = self.request.db_session
+        dbsession = self.request.dbsession
         try:
             entity = (
-                db_session.query(datastore.Entity)
+                dbsession.query(Entity)
                 .options(orm.joinedload('state'))
                 .filter_by(id=key)
                 .one())
@@ -1216,7 +1094,7 @@ class FormFactory(object):
         # to make this look prety...
         if not entity.state:
             entity.state = (
-                db_session.query(datastore.State)
+                dbsession.query(State)
                 .filter_by(name='pending-entry')
                 .one())
 
@@ -1248,7 +1126,7 @@ def _entity_acl(self):
         (Allow, groups.consumer(site), 'view')
     ]
 
-datastore.Entity.__acl__ = property(_entity_acl)
+Entity.__acl__ = property(_entity_acl)
 
 
 class ExportFactory(object):
@@ -1263,10 +1141,10 @@ class ExportFactory(object):
         self.request = request
 
     def __getitem__(self, key):
-        db_session = self.request.db_session
+        dbsession = self.request.dbsession
         try:
             export = (
-                db_session.query(Export)
+                dbsession.query(Export)
                 .options(orm.joinedload('owner_user'))
                 .filter_by(id=key)
                 .one())
@@ -1276,10 +1154,10 @@ class ExportFactory(object):
         return export
 
 
-class Export(StudiesModel,
-             datastore.Referenceable,
-             datastore.Modifiable,
-             datastore.Auditable):
+class Export(Base,
+             Referenceable,
+             Modifiable,
+             Auditable):
     """
     Metadata about an export, such as file contents and experation date.
     """
@@ -1305,7 +1183,7 @@ class Export(StudiesModel,
 
     owner_user_id = sa.Column(sa.Integer, nullable=False)
 
-    owner_user = orm.relationship(datastore.User, foreign_keys=[owner_user_id])
+    owner_user = orm.relationship(User, foreign_keys=[owner_user_id])
 
     expand_collections = sa.Column(sa.Boolean, nullable=False, default=False)
 
@@ -1372,7 +1250,7 @@ class Export(StudiesModel,
         return (
             sa.ForeignKeyConstraint(
                 columns=[cls.owner_user_id],
-                refcolumns=[datastore.User.id],
+                refcolumns=[User.id],
                 name=u'fk_%s_owner_user_id' % cls.__tablename__,
                 ondelete='CASCADE'),
             sa.UniqueConstraint(

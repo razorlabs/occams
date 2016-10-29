@@ -24,7 +24,7 @@ class TestIncludeme:
             int(expected['studies.export.expire'])
 
         config.registry.settings.update(input)
-        config.include('occams_studies.tasks')
+        config.include('occams.tasks')
         for key in input.keys():
             assert config.registry.settings[key] == expected[key]
 
@@ -39,8 +39,8 @@ class TestMakeExport:
         from zipfile import ZipFile
         from occams.celery import Session
         from occams_datastore import models as datastore
-        from occams_studies import models, tasks
-        from occams_studies.exports.pid import PidPlan
+        from occams import models, tasks
+        from occams.exports.pid import PidPlan
 
         owner = datastore.User(key=u'joe')
         Session.info['blame'] = owner

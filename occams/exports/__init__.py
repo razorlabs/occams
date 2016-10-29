@@ -22,15 +22,16 @@ from pyramid.path import DottedNameResolver
 from .. import log
 from . import codebook
 
-
-def includeme(config):
-    resolver = DottedNameResolver()
-    settings = config.registry.settings
-    names = aslist(settings.get('studies.export.plans') or '')
-    settings['studies.export.plans'] = [resolver.resolve(n) for n in names]
+from .pid import PidPlan
+from .enrollment import EnrollmentPlan
+from .visit import VisitPlan
+from .schema import SchemaPlan
 
 
-def list_all(plans, db_session, include_rand=True, include_private=True):
+plans = [PidPlan, EnrollmentPlan, VisitPlan, SchemaPlan.list_all]
+
+
+def list_all(dbsession, include_rand=True, include_private=True):
     """
     Lists all available data files
 
@@ -45,10 +46,10 @@ def list_all(plans, db_session, include_rand=True, include_private=True):
     def iterplans():
         for plan in plans:
             if inspect.isclass(plan):
-                yield plan(db_session)
+                yield plan(dbsession)
             elif inspect.ismethod(plan):
                 exportables = plan(
-                    db_session,
+                    dbsession,
                     include_rand=include_rand,
                     include_private=include_private
                 )
@@ -88,7 +89,7 @@ def write_codebook(buffer, rows):
 
     Arguments:
     buffer -- a file object which will be used to write data contents
-    rows -- Code book rows. Seee `occams_studies.codebook`
+    rows -- Code book rows. Seee `occams.codebook`
     """
     writer = csv.DictWriter(buffer, codebook.HEADER)
     writer.writeheader()

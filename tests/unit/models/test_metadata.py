@@ -30,14 +30,14 @@ def create_tables(request, engine):
     request.addfinalizer(drop_tables)
 
 
-def test_modifiable_basic(db_session):
+def test_modifiable_basic(dbsession):
     """
     It should annotate the record with modification dates
     """
 
     record = ModifiableClass()
-    db_session.add(record)
-    db_session.flush()
+    dbsession.add(record)
+    dbsession.flush()
 
     assert record.create_date is not None
     assert record.create_user_id is not None
@@ -45,7 +45,7 @@ def test_modifiable_basic(db_session):
     assert record.modify_user_id is not None
 
 
-def test_modifiable_invalid_date(db_session):
+def test_modifiable_invalid_date(dbsession):
     """
     It should not allow use of inconsitent timelines
     """
@@ -53,25 +53,25 @@ def test_modifiable_invalid_date(db_session):
     from sqlalchemy.exc import IntegrityError
 
     record = ModifiableClass()
-    db_session.add(record)
-    db_session.flush()
+    dbsession.add(record)
+    dbsession.flush()
 
     record.create_date += datetime.timedelta(1)
     with pytest.raises(IntegrityError):
-        db_session.flush()
+        dbsession.flush()
 
 
-def test_modifable_non_existent_user(db_session):
+def test_modifable_non_existent_user(dbsession):
     """
     It should fail if a non-existent user attemts to make a commti
     """
 
-    db_session.info = {}
+    dbsession.info = {}
 
     record = ModifiableClass()
-    db_session.add(record)
+    dbsession.add(record)
 
     with pytest.raises(AssertionError) as excinfo:
-        db_session.flush()
+        dbsession.flush()
 
     assert 'not configured' in str(excinfo.value)

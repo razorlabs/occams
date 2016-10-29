@@ -11,12 +11,12 @@ from pyramid.view import (
 )
 
 
-@notfound_view_config(append_slash=True)
-def notfound(exc, request):
-    """"
-    Returns HTTP Not Found only after trying to append a slash to the URL
-    """
-    return exc
+# @notfound_view_config(append_slash=True)
+# def notfound(exc, request):
+    # """"
+    # Returns HTTP Not Found only after trying to append a slash to the URL
+    # """
+    # return exc
 
 
 @forbidden_view_config()

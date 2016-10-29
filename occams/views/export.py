@@ -14,11 +14,9 @@ import six
 import transaction
 import wtforms
 
-from occams.utils.forms import wtferrors, Form
-from occams.utils.pagination import Pagination
-from occams_datastore import models as datastore
-
 from .. import _, log, models, exports, tasks
+from ..utils.forms import wtferrors, Form
+from ..utils.pagination import Pagination
 
 
 @view_config(
@@ -56,10 +54,8 @@ def checkout(context, request):
     The actual exporting process is then queued in a another thread so the user
     isn't left with an unresponsive page.
     """
-    db_session = request.db_session
-    plans = request.registry.settings['studies.export.plans']
-    exportables = exports.list_all(
-        plans, request.db_session, include_rand=False)
+    dbsession = request.dbsession
+    exportables = exports.list_all(request.dbsession, include_rand=False)
     limit = request.registry.settings.get('app.export.limit')
     exceeded = limit is not None and query_exports(request).count() > limit
     errors = {}
@@ -85,11 +81,11 @@ def checkout(context, request):
             errors = wtferrors(form)
         else:
             task_id = six.text_type(str(uuid.uuid4()))
-            db_session.add(models.Export(
+            dbsession.add(models.Export(
                 name=task_id,
                 expand_collections=form.expand_collections.data,
                 use_choice_labels=form.use_choice_labels.data,
-                owner_user=(db_session.query(datastore.User)
+                owner_user=(dbsession.query(models.User)
                             .filter_by(key=request.authenticated_userid)
                             .one()),
                 contents=[exportables[k].to_json() for k in form.contents.data]
@@ -127,9 +123,8 @@ def codebook(context, request):
     """
     Codebook viewer
     """
-    db_session = request.db_session
-    plans = request.registry.settings['studies.export.plans']
-    return {'exportables': exports.list_all(plans, db_session).values()}
+    dbsession = request.dbsession
+    return {'exportables': exports.list_all(dbsession).values()}
 
 
 @view_config(
@@ -141,7 +136,7 @@ def codebook_json(context, request):
     """
     Loads codebook rows for the specified data file
     """
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     def massage(row):
         publish_date = row['publish_date']
@@ -149,8 +144,7 @@ def codebook_json(context, request):
             row['publish_date'] = publish_date.isoformat()
         return row
 
-    plans = request.registry.settings['studies.export.plans']
-    exportables = exports.list_all(plans, db_session)
+    exportables = exports.list_all(dbsession)
 
     file = request.GET.get('file')
 
@@ -228,7 +222,7 @@ def status_json(context, request):
             'title': localizer.pluralize(
                 _(u'Export containing ${count} item'),
                 _(u'Export containing ${count} items'),
-                count, 'occams_studies', mapping={'count': count}),
+                count, 'occams', mapping={'count': count}),
             'name': export.name,
             'status': export.status,
             'use_choice_labels': export.use_choice_labels,
@@ -263,7 +257,7 @@ def notifications(context, request):
     """
 
     # Close DB connections so we don't hog them while polling
-    request.db_session.close()
+    request.dbsession.close()
 
     def listener():
         pubsub = request.redis.pubsub()
@@ -304,11 +298,11 @@ def delete_json(context, request):
     """
     Handles delete delete AJAX request
     """
-    db_session = request.db_session
+    dbsession = request.dbsession
     check_csrf_token(request)
     export = context
-    db_session.delete(export)
-    db_session.flush()
+    dbsession.delete(export)
+    dbsession.flush()
     tasks.app.control.revoke(export.name)
     return HTTPOk()
 
@@ -339,12 +333,12 @@ def query_exports(request):
     """
     Helper method to query current exports for the authenticated user
     """
-    db_session = request.db_session
+    dbsession = request.dbsession
     userid = request.authenticated_userid
     export_expire = request.registry.settings.get('studies.export.expire')
 
     query = (
-        db_session.query(models.Export)
+        dbsession.query(models.Export)
         .filter(models.Export.owner_user.has(key=userid)))
 
     if export_expire:

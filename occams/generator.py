@@ -14,28 +14,28 @@ OUR_PATTERN = re.compile(
     re.IGNORECASE | re.VERBOSE)
 
 
-def generate(db_session, site_name):
+def generate(dbsession, site_name):
     """
     Generates an OUR number for the distributor
     """
     try:
         # attempt to find an existing site registration
-        site = db_session.query(models.Site).filter_by(title=site_name).one()
+        site = dbsession.query(models.RosterSite).filter_by(title=site_name).one()
     except NoResultFound:
         # none found, so automatically register the content
-        site = models.Site(title=site_name)
-        db_session.add(site)
+        site = models.RosterSite(title=site_name)
+        dbsession.add(site)
 
     while True:
         identifier = models.Identifier(origin=site)
-        db_session.add(identifier)
-        db_session.flush()
+        dbsession.add(identifier)
+        dbsession.flush()
 
         our_number = identifier.our_number
 
         if not OUR_PATTERN.match(our_number):
             identifier.is_active = False
-            db_session.flush()
+            dbsession.flush()
             continue
 
         return our_number

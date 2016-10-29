@@ -1,5 +1,5 @@
 """
-Renders HTML versions datastore forms.
+Renders HTML versions models forms.
 
 Note that in order for these to work completely, clientside javascript
 and associated plugins must be enabled.
@@ -24,9 +24,7 @@ import wtforms.widgets.html5
 import wtforms.ext.dateutil.fields
 from wtforms_components import DateRange
 
-from occams_datastore import models as datastore
-
-from . import _, log
+from . import _, log, models
 from .fields import FileField
 
 
@@ -100,7 +98,7 @@ def form2json(schemata):
     if isinstance(schemata, collections.Iterable):
         schemata = sorted(schemata, key=by_name)
         return [make_json(g) for k, g in groupby(schemata, by_name)]
-    elif isinstance(schemata, datastore.Schema):
+    elif isinstance(schemata, models.Schema):
         return make_json([schemata])
 
 
@@ -289,7 +287,7 @@ def make_form(session,
               transition=modes.AUTO,
               allowed_versions=None):
     """
-    Converts a Datastore schema to a WTForm for data entry
+    Converts a models schema to a WTForm for data entry
 
     Parameters:
     session -- the database session to query for form metata
@@ -305,7 +303,7 @@ def make_form(session,
     the user wants to sitch together multiple forms for Long Forms.
     """
 
-    class DatastoreForm(wtforms.Form):
+    class modelsForm(wtforms.Form):
 
         class Meta:
             pass
@@ -333,14 +331,14 @@ def make_form(session,
                 return status and self.ofmetadata_.validate(self)
 
             else:
-                return status and super(DatastoreForm, self).validate(**kw)
+                return status and super(modelsForm, self).validate(**kw)
 
     if show_metadata:
 
         # If there was a version change so we render the correct form
         if formdata and 'ofmetadata_-version' in formdata:
             schema = (
-                session.query(datastore.Schema)
+                session.query(models.Schema)
                 .filter_by(
                     name=schema.name,
                     publish_date=formdata['ofmetadata_-version'])
@@ -353,11 +351,11 @@ def make_form(session,
         allowed_versions = sorted(set(allowed_versions))
 
         actual_versions = [(str(p), str(p)) for (p,) in (
-            session.query(datastore.Schema.publish_date)
-            .filter(datastore.Schema.name == schema.name)
-            .filter(datastore.Schema.publish_date.in_(allowed_versions))
-            .filter(datastore.Schema.retract_date == sa.null())
-            .order_by(datastore.Schema.publish_date.asc())
+            session.query(models.Schema.publish_date)
+            .filter(models.Schema.name == schema.name)
+            .filter(models.Schema.publish_date.in_(allowed_versions))
+            .filter(models.Schema.retract_date == sa.null())
+            .order_by(models.Schema.publish_date.asc())
             .all())]
 
         if len(allowed_versions) != len(actual_versions):
@@ -379,7 +377,7 @@ def make_form(session,
                 choices=actual_versions,
                 validators=[wtforms.validators.InputRequired()])
 
-        setattr(DatastoreForm, 'ofmetadata_', wtforms.FormField(Metadata))
+        setattr(modelsForm, 'ofmetadata_', wtforms.FormField(Metadata))
 
     if transition == modes.ALL:
         allowed_states = TRANSITIONS.keys()
@@ -399,9 +397,9 @@ def make_form(session,
     if allowed_states:
 
         allowed_states = (
-            session.query(datastore.State)
-            .filter(datastore.State.name.in_(allowed_states))
-            .order_by(datastore.State.title)
+            session.query(models.State)
+            .filter(models.State.name.in_(allowed_states))
+            .order_by(models.State.title)
         )
 
         choices = [('', '')] \
@@ -416,17 +414,17 @@ def make_form(session,
                         _('Please select a state'))
                 ])
 
-        setattr(DatastoreForm, 'ofworkflow_', wtforms.FormField(Workflow))
+        setattr(modelsForm, 'ofworkflow_', wtforms.FormField(Workflow))
 
     for attribute in schema.itertraverse():
-        setattr(DatastoreForm, attribute.name, make_field(attribute))
+        setattr(modelsForm, attribute.name, make_field(attribute))
 
-    return DatastoreForm
+    return modelsForm
 
 
 def make_longform(session, schemata):
     """
-    Converts multiple Datastore schemata to a sinlge WTForm.
+    Converts multiple models schemata to a sinlge WTForm.
     """
 
     class LongForm(wtforms.Form):
@@ -461,7 +459,7 @@ def render_form(form,
     fields_disabled = bool(disabled or metadata_disabled or (
         entity and entity.not_done))
 
-    return render('occams_forms:templates/form.pt', {
+    return render('occams:templates/form.pt', {
         'cancel_url': cancel_url,
         'schema': schema,
         'entity': entity,
@@ -520,7 +518,7 @@ def apply_data(session, entity, data, upload_path):
     # States are the only metadata that can change regardless of transition
     if previous_state != next_state:
         entity.state = (
-            session.query(datastore.State).filter_by(name=next_state).one())
+            session.query(models.State).filter_by(name=next_state).one())
 
     # Do not update data if we're transitioning from a readonly-state
     if previous_state == states.COMPLETE:
@@ -534,7 +532,7 @@ def apply_data(session, entity, data, upload_path):
             entity.not_done = metadata['not_done']
         entity.collect_date = metadata['collect_date']
         entity.schema = (
-            session.query(datastore.Schema)
+            session.query(models.Schema)
             .filter_by(
                 name=entity.schema.name,
                 publish_date=metadata['version'])
@@ -603,13 +601,13 @@ def apply_data(session, entity, data, upload_path):
                 with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
                     mime_type = m.id_filename(dest_path)
 
-                value = datastore.BlobInfo(original_name, dest_path, mime_type)
+                value = models.BlobInfo(original_name, dest_path, mime_type)
 
             else:
 
                 value = None
 
-            if isinstance(entity[attribute.name], datastore.BlobInfo):
+            if isinstance(entity[attribute.name], models.BlobInfo):
                 os.unlink(entity[attribute.name].path)
 
         else:

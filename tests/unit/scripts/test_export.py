@@ -4,9 +4,9 @@ import pytest
 
 
 @pytest.fixture
-def plan(db_session):
+def plan(dbsession):
     from sqlalchemy import literal_column
-    from occams_studies.exports.plan import ExportPlan
+    from occams.exports.plan import ExportPlan
 
     class DummyPlan(ExportPlan):
         name = u'aform'
@@ -16,20 +16,20 @@ def plan(db_session):
             return []
 
         def data(self, *args, **kw):
-            return self.db_session.query(
+            return self.dbsession.query(
                 literal_column("'blah'").label('dummy')
             )
 
-    return DummyPlan(db_session)
+    return DummyPlan(dbsession)
 
 
 class TestPrintList:
 
     # TODO: need to figure out how to ensure the export methods
-    #       were passed a db_session
+    #       were passed a dbsession
 
     @pytest.fixture(autouse=True)
-    def initialize(self, request, db_session, req):
+    def initialize(self, request, dbsession, req):
         import tempfile
         import shutil
         import mock
@@ -39,7 +39,7 @@ class TestPrintList:
         # Don't configure the session since we already did that in the
         # the package setup
         self.bootstrap_patch = mock.patch(
-            'occams_studies.scripts.export.bootstrap',
+            'occams.scripts.export.bootstrap',
             return_value={
                 'request': req,
                 'registry': req.registry,
@@ -57,7 +57,7 @@ class TestPrintList:
         # Override stdout so we can inspect output
         import sys
         from six.moves import StringIO
-        from occams_studies.scripts.export import main as cmd
+        from occams.scripts.export import main as cmd
         _saved_stdout = sys.stdout
         sys.stdout = StringIO()
         cmd(*args, **kw)
@@ -65,13 +65,13 @@ class TestPrintList:
         sys.stdout = _saved_stdout
         return output
 
-    def test_print_list(self, db_session, plan):
+    def test_print_list(self, dbsession, plan):
         """
         It should be able to print a listing of exportables
         """
         import mock
         # force list_all to return only the test form
-        with mock.patch('occams_studies.exports.list_all',
+        with mock.patch('occams.exports.list_all',
                         return_value={plan.name: plan}):
             output = self._call_fut([None, '--config', 'fake.ini', '--list'])
             assert plan.name in output
@@ -83,7 +83,7 @@ class TestPrintList:
         import mock
         plan.has_private = True
         # force list_all to return only the test form
-        with mock.patch('occams_studies.exports.list_all',
+        with mock.patch('occams.exports.list_all',
                         return_value={plan.name: plan}):
             output = self._call_fut([None, '--config', 'fake.ini', '--list'])
             assert '*' in output
@@ -95,20 +95,20 @@ class TestPrintList:
         import mock
         plan.has_rand = True
         # force list_all to return only the test form
-        with mock.patch('occams_studies.exports.list_all',
+        with mock.patch('occams.exports.list_all',
                         return_value={plan.name: plan}):
             output = self._call_fut([None, '--config', 'fake.ini', '--list'])
             assert '*' in output
 
-    def test_make_export_all(self, db_session, plan):
+    def test_make_export_all(self, dbsession, plan):
         """
         It should be able to export data for all plans
         """
         import os
         import mock
-        from occams_studies.exports.codebook import FILE_NAME
+        from occams.exports.codebook import FILE_NAME
         # force list_all to return only the test form
-        with mock.patch('occams_studies.exports.list_all',
+        with mock.patch('occams.exports.list_all',
                         return_value={plan.name: plan}):
             self._call_fut(
                 [None, '--config', 'fake.ini', '--dir', self.dir, '--all'])
@@ -123,7 +123,7 @@ class TestPrintList:
         import os
         import mock
         # force list_all to return only the test form
-        with mock.patch('occams_studies.exports.list_all',
+        with mock.patch('occams.exports.list_all',
                         return_value={plan.name: plan}):
             self._call_fut(
                 [None, '--config', 'fake.ini', '--dir', self.dir, '--all-private'])
@@ -141,7 +141,7 @@ class TestPrintList:
         import os
         import mock
         # force list_all to return only the test form
-        with mock.patch('occams_studies.exports.list_all',
+        with mock.patch('occams.exports.list_all',
                         return_value={plan.name: plan}):
             plan.has_private = True
             self._call_fut(
@@ -160,7 +160,7 @@ class TestPrintList:
         import os
         import mock
         # force list_all to return only the test form
-        with mock.patch('occams_studies.exports.list_all',
+        with mock.patch('occams.exports.list_all',
                         return_value={plan.name: plan}):
             self._call_fut(
                 [None, '--config', 'fake.ini', '--dir', self.dir, '--all-rand'])
@@ -178,7 +178,7 @@ class TestPrintList:
         import os
         import mock
         # force list_all to return only the test form
-        with mock.patch('occams_studies.exports.list_all',
+        with mock.patch('occams.exports.list_all',
                         return_value={plan.name: plan}):
             self._call_fut(
                 [None, '--config', 'fake.ini', '--dir', self.dir, plan.name])
@@ -191,7 +191,7 @@ class TestPrintList:
         import mock
         # force list_all to return only the test form
         with pytest.raises(SystemExit):
-            with mock.patch('occams_studies.exports.list_all',
+            with mock.patch('occams.exports.list_all',
                             return_value={plan.name: plan}):
                 self._call_fut([None, '--config', 'fake.ini', '--dir', self.dir])
 
@@ -203,7 +203,7 @@ class TestPrintList:
         import mock
         dest_dir = os.path.join(self.dir, 'myfiles')
         # force list_all to return only the test form
-        with mock.patch('occams_studies.exports.list_all',
+        with mock.patch('occams.exports.list_all',
                         return_value={plan.name: plan}):
             self._call_fut(
                 [None, '--config', 'fake.ini', '--all', '--dir', dest_dir,
@@ -221,7 +221,7 @@ class TestPrintList:
         os.makedirs(old_dir)
         os.symlink(old_dir, dest_dir)
         # force list_all to return only the test form
-        with mock.patch('occams_studies.exports.list_all',
+        with mock.patch('occams.exports.list_all',
                         return_value={plan.name: plan}):
             self._call_fut(
                 [None, '--config', 'fake.ini', '--all', '--dir', dest_dir,
@@ -236,7 +236,7 @@ class TestPrintList:
         import mock
         dest_dir = os.path.join(self.dir, 'myfiles')
         # force list_all to return only the test form
-        with mock.patch('occams_studies.exports.list_all',
+        with mock.patch('occams.exports.list_all',
                         return_value={}):
             self._call_fut(
                 [None, '--config', 'fake.ini', '--all', '--dir', dest_dir])

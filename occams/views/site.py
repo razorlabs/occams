@@ -3,9 +3,8 @@ from pyramid.session import check_csrf_token
 from pyramid.view import view_config
 import wtforms
 
-from occams.utils.forms import wtferrors, Form
-
 from .. import _, models
+from ..utils.forms import wtferrors, Form
 
 
 @view_config(
@@ -14,10 +13,10 @@ from .. import _, models
     xhr=True,
     renderer='json')
 def list_json(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     sites_query = (
-        db_session.query(models.Site)
+        dbsession.query(models.Site)
         .order_by(models.Site.title.asc()))
 
     return {
@@ -48,10 +47,10 @@ def view_json(context, request):
     request_param='vocabulary=available_sites',
     renderer='json')
 def available_sites(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
     term = (request.GET.get('term') or '').strip()
 
-    query = db_session.query(models.Site)
+    query = dbsession.query(models.Site)
 
     if term:
         query = query.filter(models.Site.title.ilike('%' + term + '%'))
@@ -79,7 +78,7 @@ def available_sites(context, request):
     xhr=True,
     renderer='json')
 def edit_json(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
     check_csrf_token(request)
 
     form = SiteSchema(context, request).from_json(request.json_body)
@@ -91,11 +90,11 @@ def edit_json(context, request):
         site = context
     else:
         site = models.Site()
-        db_session.add(site)
+        dbsession.add(site)
 
     site.name = form.name.data
     site.title = form.title.data
-    db_session.flush()
+    dbsession.flush()
 
     return view_json(site, request)
 
@@ -108,22 +107,22 @@ def edit_json(context, request):
     renderer='json')
 def delete_json(context, request):
     check_csrf_token(request)
-    db_session = request.db_session
-    db_session.delete(context)
-    db_session.flush()
+    dbsession = request.dbsession
+    dbsession.delete(context)
+    dbsession.flush()
     msg = _(u'Successfully deleted: ${site}', mapping={'site': context.title})
     request.session.flash(msg)
     return HTTPOk(body=msg)
 
 
 def SiteSchema(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     def unique_name(form, field):
-        query = db_session.query(models.Site).filter_by(name=field.data)
+        query = dbsession.query(models.Site).filter_by(name=field.data)
         if isinstance(context, models.Site):
             query = query.filter(models.Site.id != context.id)
-        (exists,) = db_session.query(query.exists()).one()
+        (exists,) = dbsession.query(query.exists()).one()
         if exists:
             raise wtforms.ValidationError(request.localizer.translate(
                 _(u'Site name already exists')))

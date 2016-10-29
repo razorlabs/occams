@@ -7,10 +7,10 @@ class TestPermissionsCyclesAdd:
     url = '/studies/{}/cycles'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, db_session):
+    def populate(self, app, dbsession):
 
         import transaction
-        from occams_studies import models as studies
+        from occams import models as studies
         from occams_datastore import models as datastore
         from datetime import date
 
@@ -18,9 +18,9 @@ class TestPermissionsCyclesAdd:
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            db_session.info['blame'] = user
-            db_session.add(user)
-            db_session.flush()
+            dbsession.info['blame'] = user
+            dbsession.add(user)
+            dbsession.flush()
 
             site = studies.Site(
                 name=u'UCSD',
@@ -44,8 +44,8 @@ class TestPermissionsCyclesAdd:
                 short_title=u'test_short',
             )
 
-            db_session.add(study)
-            db_session.add(patient)
+            dbsession.add(study)
+            dbsession.add(patient)
 
     @pytest.mark.parametrize('group', ['administrator', 'manager'])
     def test_allowed(self, app, group):
@@ -102,10 +102,10 @@ class TestPermissionsCyclesDelete:
     url = '/studies/test_study/cycles/TestDelete'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, db_session):
+    def populate(self, app, dbsession):
 
         import transaction
-        from occams_studies import models as studies
+        from occams import models as studies
         from occams_datastore import models as datastore
         from datetime import date
 
@@ -113,9 +113,9 @@ class TestPermissionsCyclesDelete:
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            db_session.info['blame'] = user
-            db_session.add(user)
-            db_session.flush()
+            dbsession.info['blame'] = user
+            dbsession.add(user)
+            dbsession.flush()
 
             site = studies.Site(
                 name=u'UCSD',
@@ -146,9 +146,9 @@ class TestPermissionsCyclesDelete:
                 study=study
             )
 
-            db_session.add(study)
-            db_session.add(patient)
-            db_session.add(cycle)
+            dbsession.add(study)
+            dbsession.add(patient)
+            dbsession.add(cycle)
 
     @pytest.mark.parametrize('group', ['administrator', 'manager'])
     def test_allowed(self, app, group):
@@ -197,10 +197,10 @@ class TestPermissionsCyclesEdit:
     url = '/studies/test_study/cycles/TestDelete'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, db_session):
+    def populate(self, app, dbsession):
 
         import transaction
-        from occams_studies import models as studies
+        from occams import models as studies
         from occams_datastore import models as datastore
         from datetime import date
 
@@ -208,9 +208,9 @@ class TestPermissionsCyclesEdit:
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            db_session.info['blame'] = user
-            db_session.add(user)
-            db_session.flush()
+            dbsession.info['blame'] = user
+            dbsession.add(user)
+            dbsession.flush()
 
             site = studies.Site(
                 name=u'UCSD',
@@ -241,9 +241,9 @@ class TestPermissionsCyclesEdit:
                 study=study
             )
 
-            db_session.add(study)
-            db_session.add(patient)
-            db_session.add(cycle)
+            dbsession.add(study)
+            dbsession.add(patient)
+            dbsession.add(cycle)
 
     @pytest.mark.parametrize('group', ['administrator', 'manager'])
     def test_allowed(self, app, group):
@@ -302,10 +302,10 @@ class TestPermissionsCyclesView:
     url = '/studies/test_study/cycles/TestView'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, db_session):
+    def populate(self, app, dbsession):
 
         import transaction
-        from occams_studies import models as studies
+        from occams import models as studies
         from occams_datastore import models as datastore
         from datetime import date
 
@@ -313,9 +313,9 @@ class TestPermissionsCyclesView:
         # Webtests will use a different scope for its transaction
         with transaction.manager:
             user = datastore.User(key=USERID)
-            db_session.info['blame'] = user
-            db_session.add(user)
-            db_session.flush()
+            dbsession.info['blame'] = user
+            dbsession.add(user)
+            dbsession.flush()
 
             site = studies.Site(
                 name=u'UCSD',
@@ -346,9 +346,9 @@ class TestPermissionsCyclesView:
                 study=study
             )
 
-            db_session.add(study)
-            db_session.add(patient)
-            db_session.add(cycle)
+            dbsession.add(study)
+            dbsession.add(patient)
+            dbsession.add(cycle)
 
     @pytest.mark.parametrize('group', [
         'administrator', 'manager', 'coordinator', 'enterer',

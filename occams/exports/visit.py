@@ -6,8 +6,6 @@ Formerly: avrcdataexport/sql/additional/VisitStudy.sql
 
 from sqlalchemy.orm import aliased
 
-from occams_datastore import models as datastore
-
 from .. import _, models
 from .plan import ExportPlan
 from .codebook import row, types
@@ -45,9 +43,9 @@ class VisitPlan(ExportPlan):
              use_choice_labels=False,
              expand_collections=False,
              ignore_private=True):
-        session = self.db_session
-        CreateUser = aliased(datastore.User)
-        ModifyUser = aliased(datastore.User)
+        session = self.dbsession
+        CreateUser = aliased(models.User)
+        ModifyUser = aliased(models.User)
         query = (
             session.query(
                 models.Visit.id.label('id'),

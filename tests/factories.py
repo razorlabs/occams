@@ -11,7 +11,7 @@ import factory
 from factory.alchemy import SQLAlchemyModelFactory
 
 from occams_datastore import models as datastore
-from occams_studies import models as studies
+from occams import models as studies
 
 
 class FakeDescribeable(factory.Factory):

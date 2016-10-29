@@ -4,7 +4,7 @@ import pytest
 @pytest.yield_fixture
 def check_csrf_token(config):
     import mock
-    name = 'occams_studies.views.enrollment.check_csrf_token'
+    name = 'occams.views.enrollment.check_csrf_token'
     with mock.patch(name) as patch:
         yield patch
 
@@ -12,11 +12,11 @@ def check_csrf_token(config):
 class TestViewJson:
 
     def _call_fut(self, *args, **kw):
-        from occams_studies.views.enrollment import view_json as view
+        from occams.views.enrollment import view_json as view
         return view(*args, **kw)
 
     def test_distinguish_ambiguous_enrollment(
-            self, req, db_session, factories):
+            self, req, dbsession, factories):
         """
         It should be able to distiguish which enrollment has randomization data
         """
@@ -39,7 +39,7 @@ class TestViewJson:
 
         enrollment2 = factories.EnrollmentFactory(study=study)
 
-        db_session.flush()
+        dbsession.flush()
 
         res = self._call_fut(enrollment1, req)
         assert res['stratum'] is not None
@@ -47,7 +47,7 @@ class TestViewJson:
         res = self._call_fut(enrollment2, req)
         assert res['stratum'] is None
 
-    def test_hide_blinded_randomization(self, req, db_session, factories):
+    def test_hide_blinded_randomization(self, req, dbsession, factories):
         """
         It should not include randomization status if study is blinded
         """
@@ -70,12 +70,12 @@ class TestViewJson:
         entity = factories.EntityFactory.create(schema=schema)
         enrollment.entities.add(entity)
 
-        db_session.flush()
+        dbsession.flush()
 
         res = self._call_fut(enrollment, req)
         assert res['stratum']['arm'] is None
 
-    def test_show_unblinded_randomization(self, req, db_session, factories):
+    def test_show_unblinded_randomization(self, req, dbsession, factories):
         """
         It should show randomization status if the study is not blinded
         """
@@ -98,7 +98,7 @@ class TestViewJson:
         entity = factories.EntityFactory.create(schema=schema)
         enrollment.entities.add(entity)
 
-        db_session.flush()
+        dbsession.flush()
 
         res = self._call_fut(enrollment, req)
         assert res['stratum']['arm'] is not None
@@ -107,16 +107,16 @@ class TestViewJson:
 class TestEditJson:
 
     def _call_fut(self, *args, **kw):
-        from occams_studies.views.enrollment import edit_json as view
+        from occams.views.enrollment import edit_json as view
         return view(*args, **kw)
 
-    def test_save(self, req, db_session, factories):
+    def test_save(self, req, dbsession, factories):
         from datetime import date
-        from occams_studies import models
+        from occams import models
 
         study = factories.StudyFactory.create()
         patient = factories.PatientFactory.create()
-        db_session.flush()
+        dbsession.flush()
 
         today = date.today()
 
@@ -131,7 +131,7 @@ class TestEditJson:
         req.json_body = payload
         res = self._call_fut(patient['enrollments'], req)
 
-        enrollment = db_session.query(models.Enrollment).get(res['id'])
+        enrollment = dbsession.query(models.Enrollment).get(res['id'])
 
         actual = {
             'study': str(enrollment.study.id),
@@ -143,17 +143,17 @@ class TestEditJson:
 
         assert payload == actual
 
-    def test_unique_consent(self, req, db_session, factories):
+    def test_unique_consent(self, req, dbsession, factories):
         """
         It should allow multiple enrollments to a study, but a single consent.
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies import models
+        from occams import models
 
         study = factories.StudyFactory.create()
         patient = factories.PatientFactory.create()
-        db_session.flush()
+        dbsession.flush()
 
         consent_date = date.today()
 
@@ -166,7 +166,7 @@ class TestEditJson:
         self._call_fut(patient['enrollments'], req)
 
         assert (
-            db_session.query(models.Enrollment)
+            dbsession.query(models.Enrollment)
             .filter_by(patient=patient, study=study)
             .one()) is not None
 
@@ -177,7 +177,7 @@ class TestEditJson:
         assert 'This enrollment already exists.' in \
             excinfo.value.json['errors']['consent_date']
 
-    def test_missing_consent(self, req, db_session, factories):
+    def test_missing_consent(self, req, dbsession, factories):
         """
         It should require latest date
         """
@@ -187,7 +187,7 @@ class TestEditJson:
 
         study = factories.StudyFactory.create()
         patient = factories.PatientFactory.create()
-        db_session.flush()
+        dbsession.flush()
 
         consent_date = date.today()
 
@@ -203,7 +203,7 @@ class TestEditJson:
         assert 'required' in \
             excinfo.value.json['errors']['consent_date']
 
-    def test_missing_latest_consent(self, req, db_session, factories):
+    def test_missing_latest_consent(self, req, dbsession, factories):
         """
         It should require latest consent date
         """
@@ -213,7 +213,7 @@ class TestEditJson:
 
         study = factories.StudyFactory.create()
         patient = factories.PatientFactory.create()
-        db_session.flush()
+        dbsession.flush()
 
         consent_date = date.today()
 
@@ -229,7 +229,7 @@ class TestEditJson:
         assert 'required' in \
             excinfo.value.json['errors']['latest_consent_date']
 
-    def test_disable_study_update(self, req, db_session, factories):
+    def test_disable_study_update(self, req, dbsession, factories):
         """
         It should not allow a enrollment's study to be changed
         """
@@ -243,7 +243,7 @@ class TestEditJson:
             study=study1,
             patient=patient,
             consent_date=study1.consent_date)
-        db_session.flush()
+        dbsession.flush()
 
         consent_date = date.today()
 
@@ -259,7 +259,7 @@ class TestEditJson:
         assert 'Cannot change an enrollment\'s study.' in \
             excinfo.value.json['errors']['study']
 
-    def test_update_patient(self, req, db_session, factories):
+    def test_update_patient(self, req, dbsession, factories):
         """
         It should mark the patient as updated
         """
@@ -267,7 +267,7 @@ class TestEditJson:
 
         study = factories.StudyFactory.create()
         patient = factories.PatientFactory.create()
-        db_session.flush()
+        dbsession.flush()
 
         old_modify_date = patient.modify_date
         req.json_body = {
@@ -280,7 +280,7 @@ class TestEditJson:
         assert old_modify_date < patient.modify_date
 
     def test_temination_date_disabled_if_form_configured(
-            self, req, db_session, factories):
+            self, req, dbsession, factories):
         """
         Termination date is populated via form when available
         """
@@ -311,7 +311,7 @@ class TestEditJson:
             termination_date=t3
         )
 
-        db_session.flush()
+        dbsession.flush()
 
         req.json_body = {
             'study': enrollment.study.id,
@@ -327,7 +327,7 @@ class TestEditJson:
         assert t3 == enrollment.termination_date
 
     def test_temination_date_enabled_if_no_termination(
-            self, req, db_session, factories):
+            self, req, dbsession, factories):
         """
         Termination date is populated directly through form is unavailable
         """
@@ -348,7 +348,7 @@ class TestEditJson:
             consent_date=t1,
             termination_date=t3
         )
-        db_session.flush()
+        dbsession.flush()
 
         req.json_body = {
             'study': enrollment.study.id,
@@ -367,47 +367,47 @@ class TestEditJson:
 class TestDeleteJson:
 
     def _call_fut(self, *args, **kw):
-        from occams_studies.views.enrollment import delete_json as view
+        from occams.views.enrollment import delete_json as view
         return view(*args, **kw)
 
-    def test_update_patient(self, req, db_session, factories):
+    def test_update_patient(self, req, dbsession, factories):
         """
         It should mark the patient as updated
         """
         enrollment = factories.EnrollmentFactory.create()
         patient = enrollment.patient
-        db_session.flush()
+        dbsession.flush()
 
         old_modify_date = patient.modify_date
         self._call_fut(enrollment, req)
         assert old_modify_date < patient.modify_date
 
-    def test_cascade_forms(self, req, db_session, factories):
+    def test_cascade_forms(self, req, dbsession, factories):
         """
         It should also remove termination forms.
         """
         from occams_datastore import models as datastore
-        from occams_studies import models
+        from occams import models
 
         enrollment = factories.EnrollmentFactory.create()
         enrollment.entities.add(factories.EntityFactory.create())
-        db_session.flush()
+        dbsession.flush()
 
         enrollment_id = enrollment.id
 
         self._call_fut(enrollment, req)
 
-        assert db_session.query(models.Enrollment).get(enrollment_id) is None
-        assert 0 == db_session.query(datastore.Entity).count()
+        assert dbsession.query(models.Enrollment).get(enrollment_id) is None
+        assert 0 == dbsession.query(datastore.Entity).count()
 
 
 class Test_terminate_ajax:
 
     def _call_fut(self, *args, **kw):
-        from occams_studies.views.enrollment import terminate_ajax as view
+        from occams.views.enrollment import terminate_ajax as view
         return view(*args, **kw)
 
-    def test_context_attach_on_create(self, req, db_session, config, factories):
+    def test_context_attach_on_create(self, req, dbsession, config, factories):
         """
         It should create a new termination schema and attach when none is found
         """
@@ -427,13 +427,13 @@ class Test_terminate_ajax:
         study = factories.StudyFactory.create(
             termination_schema=termination_schema)
         enrollment = factories.EnrollmentFactory.create(study=study)
-        db_session.flush()
+        dbsession.flush()
 
         req.current_route_path = mock.Mock(return_value='/a/b/c')
         req.POST = MultiDict()
         res = self._call_fut(enrollment, req)
 
-        db_session.refresh(enrollment)
+        dbsession.refresh(enrollment)
 
         enrollment_entities = list(enrollment.entities)
         assert len(enrollment_entities)
@@ -447,15 +447,15 @@ class Test_terminate_ajax:
 class Test_randomization_ajax:
 
     def _call_fut(self, *args, **kw):
-        from occams_studies.views.enrollment import randomize_ajax as view
+        from occams.views.enrollment import randomize_ajax as view
         return view(*args, **kw)
 
-    def test_get_randomized_view(self, req, db_session, config, factories):
+    def test_get_randomized_view(self, req, dbsession, config, factories):
         """
         It should render randomization details for randomized enrollment
         """
         import mock
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_INFO_KEY
 
         config.include('pyramid_chameleon')
@@ -469,7 +469,7 @@ class Test_randomization_ajax:
         enrollment = factories.EnrollmentFactory.create(
             study=study,
             stratum=stratum)
-        db_session.flush()
+        dbsession.flush()
 
         req.current_route_path = mock.Mock(return_value='/a/b/c')
         req.session[RAND_INFO_KEY] = None
@@ -478,14 +478,14 @@ class Test_randomization_ajax:
 
         assert 'Randomization Status' in res['content']
 
-    def test_get_challenge_view(self, req, db_session, config, factories):
+    def test_get_challenge_view(self, req, dbsession, config, factories):
         """
         It should render the challenge form first when beginning randomization
         """
         import uuid
         import mock
         from webob.multidict import MultiDict
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_INFO_KEY, RAND_CHALLENGE
 
         config.include('pyramid_chameleon')
@@ -494,7 +494,7 @@ class Test_randomization_ajax:
             is_randomized=True,
             randomization_schema=factories.SchemaFactory.create())
         enrollment = factories.EnrollmentFactory.create(study=study)
-        db_session.flush()
+        dbsession.flush()
 
         procid = str(uuid.uuid4())
         req.current_route_path = mock.Mock(return_value='/a/b/c')
@@ -509,14 +509,14 @@ class Test_randomization_ajax:
 
         assert '(Step 1 of 3)' in res['content']
 
-    def test_get_enter_view(self, req, db_session, config, factories):
+    def test_get_enter_view(self, req, dbsession, config, factories):
         """
         It should render the enter form when at the ENTER stage
         """
         import uuid
         import mock
         from webob.multidict import MultiDict
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_INFO_KEY, RAND_ENTER
 
         config.include('pyramid_chameleon')
@@ -525,7 +525,7 @@ class Test_randomization_ajax:
             is_randomized=True,
             randomization_schema=factories.SchemaFactory.create())
         enrollment = factories.EnrollmentFactory.create(study=study)
-        db_session.flush()
+        dbsession.flush()
 
         procid = str(uuid.uuid4())
         req.current_route_path = mock.Mock(return_value='/a/b/c')
@@ -540,14 +540,14 @@ class Test_randomization_ajax:
 
         assert '(Step 2 of 3)' in res['content']
 
-    def test_get_verify_view(self, req, db_session, config, factories):
+    def test_get_verify_view(self, req, dbsession, config, factories):
         """
         It should render the verify form when at the VERIFY stage
         """
         import uuid
         import mock
         from webob.multidict import MultiDict
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_INFO_KEY, RAND_VERIFY
 
         config.include('pyramid_chameleon')
@@ -556,7 +556,7 @@ class Test_randomization_ajax:
             is_randomized=True,
             randomization_schema=factories.SchemaFactory.create())
         enrollment = factories.EnrollmentFactory.create(study=study)
-        db_session.flush()
+        dbsession.flush()
 
         procid = str(uuid.uuid4())
         req.current_route_path = mock.Mock(return_value='/a/b/c')
@@ -571,12 +571,12 @@ class Test_randomization_ajax:
 
         assert '(Step 3 of 3)' in res['content']
 
-    def test_challenge(self, req, db_session, config, factories):
+    def test_challenge(self, req, dbsession, config, factories):
         """
         It should set to CHALLENGE mode when no session is found
         """
         import mock
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_INFO_KEY, RAND_CHALLENGE
 
         config.include('pyramid_chameleon')
@@ -585,7 +585,7 @@ class Test_randomization_ajax:
             study__is_randomized=True,
             study__randomization_schema=factories.SchemaFactory.create(),
         )
-        db_session.flush()
+        dbsession.flush()
 
         req.current_route_path = mock.Mock(return_value='/a/b/c')
         req.session[RAND_INFO_KEY] = None
@@ -595,7 +595,7 @@ class Test_randomization_ajax:
         assert req.session[RAND_INFO_KEY]['stage'] == RAND_CHALLENGE
 
     def test_transition_from_enter_to_verify(
-            self, req, db_session, config, factories):
+            self, req, dbsession, config, factories):
         """
         It should transition from ENTER to VERIFY on successfull submit
         """
@@ -603,7 +603,7 @@ class Test_randomization_ajax:
         import uuid
         import mock
         from webob.multidict import MultiDict
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_INFO_KEY, RAND_ENTER, RAND_VERIFY
 
         config.include('pyramid_chameleon')
@@ -628,7 +628,7 @@ class Test_randomization_ajax:
         assert req.session[RAND_INFO_KEY]['stage'] == RAND_VERIFY
 
     def test_transition_from_verify_to_complete(
-            self, req, db_session, config, factories):
+            self, req, dbsession, config, factories):
         """
         It should randomize the patient on successful submit from VERIFY
         """
@@ -636,7 +636,7 @@ class Test_randomization_ajax:
         import uuid
         import mock
         from webob.multidict import MultiDict
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_INFO_KEY, RAND_VERIFY
 
         config.include('pyramid_chameleon')
@@ -651,7 +651,7 @@ class Test_randomization_ajax:
         stratum.entities.add(factories.EntityFactory.create(
             schema=enrollment.study.randomization_schema
         ))
-        db_session.flush()
+        dbsession.flush()
 
         procid = str(uuid.uuid4())
         req.current_route_path = mock.Mock(return_value='/a/b/c')
@@ -666,7 +666,7 @@ class Test_randomization_ajax:
 
         assert RAND_INFO_KEY not in req.session
 
-    def test_randid_assignment(self, req, db_session, config, factories):
+    def test_randid_assignment(self, req, dbsession, config, factories):
         """
         It should assign randomiation ids sequentially
         """
@@ -674,7 +674,7 @@ class Test_randomization_ajax:
         import uuid
         import mock
         from webob.multidict import MultiDict
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_INFO_KEY, RAND_VERIFY
 
         config.include('pyramid_chameleon')
@@ -696,7 +696,7 @@ class Test_randomization_ajax:
 
         enrollment1 = factories.EnrollmentFactory.create(study=study)
         enrollment2 = factories.EnrollmentFactory.create(study=study)
-        db_session.flush()
+        dbsession.flush()
 
         procid = str(uuid.uuid4())
         req.current_route_path = mock.Mock(return_value='/a/b/c')
@@ -709,7 +709,7 @@ class Test_randomization_ajax:
 
         res = self._call_fut(enrollment1, req)
 
-        db_session.refresh(enrollment1)
+        dbsession.refresh(enrollment1)
 
         assert res.status_code == 302
         assert enrollment1.stratum == stratum1
@@ -722,20 +722,20 @@ class Test_randomization_ajax:
         req.POST = MultiDict({'procid': procid})
         res = self._call_fut(enrollment2, req)
 
-        db_session.refresh(enrollment2)
+        dbsession.refresh(enrollment2)
 
         assert res.status_code == 302
         assert enrollment2.stratum == stratum2
 
     def test_randid_assignment_with_criteria(
-            self, req, db_session, config, factories):
+            self, req, dbsession, config, factories):
         """
         It should assign a randid given the criteria associated with a stratum
         """
         import uuid
         import mock
         from webob.multidict import MultiDict
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_INFO_KEY, RAND_VERIFY
 
         schema = factories.SchemaFactory.create(
@@ -769,7 +769,7 @@ class Test_randomization_ajax:
         stratum2.entities.add(entity2)
 
         enrollment = factories.EnrollmentFactory.create(study=study)
-        db_session.flush()
+        dbsession.flush()
 
         config.include('pyramid_chameleon')
 
@@ -785,12 +785,12 @@ class Test_randomization_ajax:
         }
         res = self._call_fut(enrollment, req)
 
-        db_session.refresh(enrollment)
+        dbsession.refresh(enrollment)
 
         assert res.status_code == 302
         assert enrollment.stratum == stratum2
 
-    def test_multiple_randomization(self, req, db_session, config, factories):
+    def test_multiple_randomization(self, req, dbsession, config, factories):
         """
         It should return a flash message to the user indicating more than
         one randomization is in progress
@@ -798,7 +798,7 @@ class Test_randomization_ajax:
         import uuid
         import mock
         from webob.multidict import MultiDict
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_INFO_KEY, RAND_ENTER, RAND_VERIFY
 
         config.include('pyramid_chameleon')
@@ -836,14 +836,14 @@ class Test_randomization_ajax:
         assert req.session.pop_flash('warning')[0] == msg
 
     def test_randomizing_a_randomized_patient(
-            self, req, db_session, config, factories):
+            self, req, dbsession, config, factories):
         """
         It should return a msg indicating the patient is already randomized.
         """
         import uuid
         import mock
         from webob.multidict import MultiDict
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_INFO_KEY, RAND_CHALLENGE
 
         config.include('pyramid_chameleon')
@@ -860,7 +860,7 @@ class Test_randomization_ajax:
             study=study,
             stratum=stratum
         )
-        db_session.flush()
+        dbsession.flush()
 
         procid = str(uuid.uuid4())
         req.current_route_path = mock.Mock(return_value='/a/b/c')
@@ -878,14 +878,14 @@ class Test_randomization_ajax:
         assert req.session.pop_flash('warning')[0] == msg
 
     def test_transition_from_challenge_to_enter(
-            self, req, db_session, config, factories):
+            self, req, dbsession, config, factories):
         """
         It should transition from CHALLENGE to ENTER on successfull submit.
         """
         import uuid
         import mock
         from webob.multidict import MultiDict
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_CHALLENGE, RAND_INFO_KEY, RAND_ENTER
 
         config.include('pyramid_chameleon')
@@ -894,7 +894,7 @@ class Test_randomization_ajax:
             study__is_randomized=True,
             study__randomization_schema=factories.SchemaFactory.create(),
         )
-        db_session.flush()
+        dbsession.flush()
 
         procid = str(uuid.uuid4())
         req.current_route_path = mock.Mock(return_value='/a/b/c')
@@ -916,13 +916,13 @@ class Test_randomization_ajax:
         assert req.session[RAND_INFO_KEY]['stage'] == RAND_ENTER
 
     def test_challenge_form_doesnt_validate(
-            self, req, db_session, config, factories):
+            self, req, dbsession, config, factories):
         """It should raise an exception if the form validation fails."""
         import uuid
         import mock
         from webob.multidict import MultiDict
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_CHALLENGE, RAND_INFO_KEY
 
         config.include('pyramid_chameleon')
@@ -931,7 +931,7 @@ class Test_randomization_ajax:
             study__is_randomized=True,
             study__randomization_schema=factories.SchemaFactory.create(),
         )
-        db_session.flush()
+        dbsession.flush()
 
         procid = str(uuid.uuid4())
         req.current_route_path = mock.Mock(return_value='/a/b/c')
@@ -952,14 +952,14 @@ class Test_randomization_ajax:
             self._call_fut(enrollment, req)
 
     def test_enter_form_doesnt_validate(
-            self, req, db_session, config, factories):
+            self, req, dbsession, config, factories):
         """It should raise an exception if the form validation fails."""
 
         import uuid
         import mock
         from webob.multidict import MultiDict
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_INFO_KEY, RAND_ENTER
         config.include('pyramid_chameleon')
 
@@ -979,7 +979,7 @@ class Test_randomization_ajax:
         req.method = 'POST'
         req.POST = MultiDict({'procid': procid})
 
-        with mock.patch('occams_studies.views.enrollment.make_form') as mock_form:
+        with mock.patch('occams.views.enrollment.make_form') as mock_form:
             validate_obj = mock.Mock()
             validate_obj.return_value = [0, 1]
             validate_obj.validate.return_value = False
@@ -987,21 +987,21 @@ class Test_randomization_ajax:
             mock_form_obj.return_value = validate_obj
             mock_form.return_value = mock_form_obj
 
-            with mock.patch('occams_studies.views.enrollment.wtferrors') as mock_wtf:
+            with mock.patch('occams.views.enrollment.wtferrors') as mock_wtf:
                 mock_wtf.return_value = u''
 
                 with pytest.raises(HTTPBadRequest) as excinfo:
                     self._call_fut(enrollment, req)
 
     def test_verify_form_doesnt_validate(
-            self, req, db_session, config, factories):
+            self, req, dbsession, config, factories):
         """It should raise an exception if the form validation fails."""
 
         import uuid
         import mock
         from webob.multidict import MultiDict
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_INFO_KEY, RAND_VERIFY
         config.include('pyramid_chameleon')
 
@@ -1021,7 +1021,7 @@ class Test_randomization_ajax:
         req.method = 'POST'
         req.POST = MultiDict({'procid': procid})
 
-        with mock.patch('occams_studies.views.enrollment.make_form') as mock_form:
+        with mock.patch('occams.views.enrollment.make_form') as mock_form:
             validate_obj = mock.Mock()
             validate_obj.return_value = [0, 1]
             validate_obj.validate.return_value = False
@@ -1029,20 +1029,20 @@ class Test_randomization_ajax:
             mock_form_obj.return_value = validate_obj
             mock_form.return_value = mock_form_obj
 
-            with mock.patch('occams_studies.views.enrollment.wtferrors') as mock_wtf:
+            with mock.patch('occams.views.enrollment.wtferrors') as mock_wtf:
                 mock_wtf.return_value = u''
 
                 with pytest.raises(HTTPBadRequest) as excinfo:
                     self._call_fut(enrollment, req)
 
     def test_verify_fails(
-            self, req, db_session, config, factories):
+            self, req, dbsession, config, factories):
         """It should return a msg that verify data doesn't match entered data."""
 
         import uuid
         import mock
         from webob.multidict import MultiDict
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_INFO_KEY, RAND_VERIFY, RAND_ENTER
 
         config.include('pyramid_chameleon')
@@ -1083,7 +1083,7 @@ class Test_randomization_ajax:
         assert req.session[RAND_INFO_KEY]['stage'] == RAND_ENTER
         assert partial_msg in req.session.pop_flash('warning')[0]
 
-    def test_no_randid_numbers_left(self, req, db_session, config, factories):
+    def test_no_randid_numbers_left(self, req, dbsession, config, factories):
         """
         It should create an HTTPBadResponse when rand numbers are depleted
         """
@@ -1092,7 +1092,7 @@ class Test_randomization_ajax:
         import mock
         from webob.multidict import MultiDict
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_studies.views.enrollment import \
+        from occams.views.enrollment import \
             RAND_INFO_KEY, RAND_VERIFY
 
         config.include('pyramid_chameleon')
@@ -1105,7 +1105,7 @@ class Test_randomization_ajax:
             randomization_schema=factories.SchemaFactory.create())
 
         enrollment1 = factories.EnrollmentFactory.create(study=study)
-        db_session.flush()
+        dbsession.flush()
 
         procid = str(uuid.uuid4())
         req.current_route_path = mock.Mock(return_value='/a/b/c')
@@ -1116,7 +1116,7 @@ class Test_randomization_ajax:
         }
         req.POST = MultiDict({'procid': procid})
 
-        db_session.refresh(enrollment1)
+        dbsession.refresh(enrollment1)
 
         with pytest.raises(HTTPBadRequest) as excinfo:
             self._call_fut(enrollment1, req)
@@ -1124,7 +1124,7 @@ class Test_randomization_ajax:
         assert 'numbers depleted' in excinfo.value.body
 
     def test_restart_on_invalid_stage(
-            self, req, db_session, config, factories):
+            self, req, dbsession, config, factories):
         """
         It should restart the process when unknown stage is detected.
         This should never happen, but if it does it is logged.
@@ -1132,7 +1132,7 @@ class Test_randomization_ajax:
         import uuid
         import mock
         from webob.multidict import MultiDict
-        from occams_studies.views.enrollment import RAND_INFO_KEY
+        from occams.views.enrollment import RAND_INFO_KEY
 
         config.include('pyramid_chameleon')
 
@@ -1140,7 +1140,7 @@ class Test_randomization_ajax:
             is_randomized=True,
             randomization_schema=factories.SchemaFactory.create())
         enrollment = factories.EnrollmentFactory.create(study=study)
-        db_session.flush()
+        dbsession.flush()
 
         procid = str(uuid.uuid4())
         req.method = 'POST'

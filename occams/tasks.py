@@ -6,6 +6,8 @@ can continue to use the application and download their exports at a
 later time.
 """
 
+from __future__ import absolute_import
+
 try:
     import unicodecsv as csv
 except ImportError:  # pragma: nocover
@@ -125,8 +127,7 @@ def make_export(name):
 
     with closing(ZipFile(export.path, 'w', ZIP_DEFLATED)) as zfp:
 
-        plans = app.settings['studies.export.plans']
-        exportables = exports.list_all(plans, Session)
+        exportables = exports.list_all(Session)
 
         for item in export.contents:
             plan = exportables[item['name']]
@@ -167,10 +168,8 @@ def make_codebook(task):
     Pre-cooks a codebook file for faster downloading
     """
     try:
-        plans = app.settings['studies.export.plans']
         codebook_chain = \
-            [p.codebook() for p in six.itervalues(
-                exports.list_all(plans, Session))]
+            [p.codebook() for p in six.itervalues(exports.list_all(Session))]
         path = os.path.join(app.settings['studies.export.dir'],
                             exports.codebook.FILE_NAME)
         with open(path, 'w+b') as fp:

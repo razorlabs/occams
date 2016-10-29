@@ -11,7 +11,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import object_session, relationship
 
-from . import DataStoreModel
+from .meta import Base
 
 
 def updateMetadata(instance, created):
@@ -61,7 +61,7 @@ class Describeable(object):
     description = Column(UnicodeText)
 
 
-class User(DataStoreModel, Referenceable):
+class User(Base, Referenceable):
     """
     A simple 'blame' user for audit trails
     """

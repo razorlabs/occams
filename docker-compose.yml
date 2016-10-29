@@ -5,7 +5,7 @@
 
 app:
   build: .
-  command: gunicorn --paster develop.ini
+  command: gunicorn --no-sendfile --paster develop.ini
   restart: always
   ports:
     - "3000:3000"
@@ -13,11 +13,12 @@ app:
     - postgres:postgres
     - redis:redis
   volumes:
-    - ./occams_studies:/app/occams_studies
+    - ./occams:/app/occams
     - ./develop.ini:/app/develop.ini
+    - ./bower.json:/app/bower.json
     - ./tests:/app/tests
-    - occams_uploads:/files/uploads
-    - occams_exports:/files/exports
+    - uploads:/files/uploads
+    - exports:/files/exports
 
 celery:
   build: .
@@ -41,7 +42,7 @@ postgres:
     - "5432:5432"
   volumes:
     - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
-    - occams_db:/var/lib/postgresql/data/
+    - postgres:/var/lib/postgresql/data/
 
 redis:
   image: redis:latest

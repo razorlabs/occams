@@ -1,6 +1,6 @@
 from pyramid.view import view_config
 
-from occams_datastore import models as datastore
+from .. import _, models
 
 
 @view_config(
@@ -12,9 +12,9 @@ def view(context, request):
     Displays default workflow
     """
 
-    db_session = request.db_session
+    dbsession = request.dbsession
 
-    states = db_session.query(datastore.State).order_by(datastore.State.name)
+    states = dbsession.query(models.State).order_by(models.State.name)
 
     return {
         'states': iter(states),

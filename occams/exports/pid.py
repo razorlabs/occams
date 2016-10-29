@@ -19,10 +19,8 @@ from pyramid.decorator import reify
 from sqlalchemy import literal_column
 from sqlalchemy.orm import aliased
 
-from occams_datastore import models as datastore
-from occams_datastore.utils.sql import group_concat
-
 from .. import _, models
+from ..utils.sql import group_concat
 from .plan import ExportPlan
 from .codebook import row, types
 
@@ -36,7 +34,7 @@ class PidPlan(ExportPlan):
     @reify
     def reftypes(self):
         return list(
-            self.db_session.query(models.ReferenceType)
+            self.dbsession.query(models.ReferenceType)
             .order_by(models.ReferenceType.name))
 
     def codebook(self):
@@ -68,7 +66,7 @@ class PidPlan(ExportPlan):
              use_choice_labels=False,
              expand_collections=False,
              ignore_private=True):
-        session = self.db_session
+        session = self.dbsession
         query = (
             session.query(
                 models.Patient.id.label('id'),
@@ -105,8 +103,8 @@ class PidPlan(ExportPlan):
                 .as_scalar()
                 .label(reftype.name))
 
-        CreateUser = aliased(datastore.User)
-        ModifyUser = aliased(datastore.User)
+        CreateUser = aliased(models.User)
+        ModifyUser = aliased(models.User)
 
         query = (
             query

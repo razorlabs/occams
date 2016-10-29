@@ -8,19 +8,20 @@ from itertools import chain
 import re
 
 from six import iterkeys, iteritems, itervalues
-from sqlalchemy import(
+from sqlalchemy import (
     cast,
     sql,
     Table, Column,
     PrimaryKeyConstraint,
     CheckConstraint, UniqueConstraint, ForeignKeyConstraint, Index,
-    Boolean, Enum, Date, Integer, String, Unicode, UnicodeText)
+    Boolean, Enum, Date, Integer, String, Unicode, UnicodeText
+)
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import backref, relationship, validates
 from sqlalchemy.orm.collections import attribute_mapped_collection
 
-from . import DataStoreModel
+from .meta import Base
 from .metadata import Referenceable, Describeable, Modifiable
 from .auditing import Auditable
 from ..utils.sql import CaseInsensitive
@@ -59,7 +60,7 @@ RESERVED_WORDS = frozenset(
 
 
 class Category(
-        DataStoreModel, Referenceable, Describeable, Modifiable, Auditable):
+        Base, Referenceable, Describeable, Modifiable, Auditable):
     """
     Logical categories for schemata in order to be able to group them.
     """
@@ -74,7 +75,7 @@ class Category(
 
 schema_category_table = Table(
     'schema_category',
-    DataStoreModel.metadata,
+    Base.metadata,
     Column('schema_id', Integer),
     Column('category_id', Integer),
     PrimaryKeyConstraint('schema_id', 'category_id'),
@@ -91,7 +92,7 @@ schema_category_table = Table(
 
 
 class Schema(
-        DataStoreModel, Referenceable, Describeable, Modifiable, Auditable):
+        Base, Referenceable, Describeable, Modifiable, Auditable):
     """
     An object that describes how an EAV schema is generated.
     Typically, an EAV schema represents a group of attributes that represent
@@ -248,7 +249,7 @@ Index(
 
 
 class Attribute(
-        DataStoreModel, Referenceable, Describeable, Modifiable, Auditable):
+        Base, Referenceable, Describeable, Modifiable, Auditable):
     """
     An object that describes how an EAV attribute is generated.
     Typically, an attribute is a meaningful property in the class data set.
@@ -601,7 +602,7 @@ Index(
 
 
 class Choice(
-        DataStoreModel, Referenceable, Describeable, Modifiable, Auditable):
+        Base, Referenceable, Describeable, Modifiable, Auditable):
     """
     Possible value constraints for an attribute.
     Note objects of this type are not versioned, as they are merely an

@@ -69,7 +69,7 @@ def create_tables(request):
     import os
     from sqlalchemy import create_engine
     from occams_datastore import models as datastore
-    from occams_studies import models
+    from occams import models
 
     db_url = request.config.getoption('--db')
     reuse = request.config.getoption('--reuse')
@@ -117,7 +117,7 @@ def config(request):
 
     # Load mimimum set of plugins
     test_config.include('occams.models')
-    test_config.include('occams_studies.routes')
+    test_config.include('occams.routes')
 
     yield test_config
 
@@ -126,7 +126,7 @@ def config(request):
 
 
 @pytest.fixture
-def db_session(config):
+def dbsession(config):
     """
     (Integartion Testing) Instantiates a database session.
 
@@ -138,22 +138,22 @@ def db_session(config):
     import occams_datastore.models.events
     import zope.sqlalchemy
 
-    db_session = config.registry['dbsession_factory']()
+    dbsession = config.registry['dbsession_factory']()
 
-    occams_datastore.models.events.register(db_session)
-    zope.sqlalchemy.register(db_session)
+    occams_datastore.models.events.register(dbsession)
+    zope.sqlalchemy.register(dbsession)
 
     # Pre-configure with a blame user
     blame = datastore.User(key=USERID)
-    db_session.add(blame)
-    db_session.flush()
-    db_session.info['blame'] = blame
+    dbsession.add(blame)
+    dbsession.flush()
+    dbsession.info['blame'] = blame
 
     # Other expected settings
-    db_session.info['settings'] = config.registry.settings
+    dbsession.info['settings'] = config.registry.settings
 
     # Hardcoded workflow
-    db_session.add_all([
+    dbsession.add_all([
         datastore.State(name=u'pending-entry', title=u'Pending Entry'),
         datastore.State(name=u'pending-review', title=u'Pending Review'),
         datastore.State(name=u'pending-correction',
@@ -161,21 +161,21 @@ def db_session(config):
         datastore.State(name=u'complete', title=u'Complete')
     ])
 
-    return db_session
+    return dbsession
 
 
 @pytest.fixture
-def req(db_session):
+def req(dbsession):
     """
     (Integration Testing) Creates a dummy request
 
     The request is setup with configuration CSRF values and the expected
-    ``db_session`` property, the goal being to be be as close to a real
+    ``dbsession`` property, the goal being to be be as close to a real
     database session as possible.
 
     Note that we must called it "req" as "request" is reserved by pytest.
 
-    :param db_session: The testing database session
+    :param dbsession: The testing database session
 
     :returns: a configured request object
     """
@@ -192,18 +192,18 @@ def req(db_session):
     dummy_request.headers['X-CSRF-Token'] = csrf_token
 
     # Attach database session for expected behavior
-    dummy_request.db_session = db_session
-    db_session.info['request'] = dummy_request
+    dummy_request.dbsession = dbsession
+    dbsession.info['request'] = dummy_request
 
     return dummy_request
 
 
 @pytest.fixture
-def factories(db_session):
+def factories(dbsession):
     """
     Configures the data factories
 
-    :param db_session: testing session fixture
+    :param dbsession: testing session fixture
     :returns: the configured factories module
     """
 
@@ -214,7 +214,7 @@ def factories(db_session):
 
     for class_name, class_ in classes:
         if hasattr(class_, '_meta') and hasattr(class_._meta, 'model'):
-            class_._meta.sqlalchemy_session = db_session
+            class_._meta.sqlalchemy_session = dbsession
 
     return factories
 
@@ -272,7 +272,7 @@ def wsgi(request):
 
         'webassets.debug': True,
 
-        'occams.apps': ['occams_studies', 'occams_roster'],
+        'occams.apps': ['occams', 'occams_roster'],
 
         'occams.db.url': db_url,
         'occams.groups': [],
@@ -283,10 +283,10 @@ def wsgi(request):
 
         'studies.export.dir': '/tmp',
         'studies.export.plans': [
-            'occams_studies.exports.pid.PidPlan',
-            'occams_studies.exports.enrollment.EnrollmentPlan',
-            'occams_studies.exports.visit.VisitPlan',
-            'occams_studies.exports.schema.SchemaPlan.list_all',
+            'occams.exports.pid.PidPlan',
+            'occams.exports.enrollment.EnrollmentPlan',
+            'occams.exports.visit.VisitPlan',
+            'occams.exports.schema.SchemaPlan.list_all',
         ],
         'studies.pid.package': 'occams_roster',
         'studies.blob.dir': '/tmp',
@@ -306,13 +306,13 @@ def wsgi(request):
 
 
 @pytest.yield_fixture
-def app(request, wsgi, db_session):
+def app(request, wsgi, dbsession):
     """
     (Functional Testing) Initiates a user request against a WSGI stack
 
     :param request: The pytest context
     :param wsgi: An initialized WSGI stack
-    :param db_session: A database session for seting up pre-existing data
+    :param dbsession: A database session for seting up pre-existing data
 
     :returns: a test app request against the WSGI instance
     """
@@ -321,14 +321,14 @@ def app(request, wsgi, db_session):
     from zope.sqlalchemy import mark_changed
     from occams_datastore import models as datastore
 
-    # Save all changes up tho this point (db_session does some configuration)
+    # Save all changes up tho this point (dbsession does some configuration)
     with transaction.manager:
         blame = datastore.User(key='workflow@localhost')
-        db_session.add(blame)
-        db_session.flush()
-        db_session.info['blame'] = blame
+        dbsession.add(blame)
+        dbsession.flush()
+        dbsession.info['blame'] = blame
 
-        db_session.add_all([
+        dbsession.add_all([
             datastore.State(name=u'pending-entry', title=u'Pending Entry'),
             datastore.State(name=u'pending-review', title=u'Pending Review'),
             datastore.State(name=u'pending-correction',
@@ -345,14 +345,14 @@ def app(request, wsgi, db_session):
         # http://stackoverflow.com/a/11423886/148781
         # We also have to do this as a raw query becuase SA does
         # not have a way to invoke server-side cascade
-        db_session.execute('DELETE FROM "study" CASCADE')
-        db_session.execute('DELETE FROM "patient" CASCADE')
-        db_session.execute('DELETE FROM "site" CASCADE')
-        db_session.execute('DELETE FROM "schema" CASCADE')
-        db_session.execute('DELETE FROM "export" CASCADE')
-        db_session.execute('DELETE FROM "state" CASCADE')
-        db_session.execute('DELETE FROM "user" CASCADE')
-        mark_changed(db_session)
+        dbsession.execute('DELETE FROM "study" CASCADE')
+        dbsession.execute('DELETE FROM "patient" CASCADE')
+        dbsession.execute('DELETE FROM "site" CASCADE')
+        dbsession.execute('DELETE FROM "schema" CASCADE')
+        dbsession.execute('DELETE FROM "export" CASCADE')
+        dbsession.execute('DELETE FROM "state" CASCADE')
+        dbsession.execute('DELETE FROM "user" CASCADE')
+        mark_changed(dbsession)
 
 
 @pytest.fixture
@@ -370,7 +370,7 @@ def celery(request):
     from sqlalchemy import create_engine
     from occams.celery import Session
     from occams_datastore import models as datastore
-    from occams_studies import tasks
+    from occams import tasks
 
     settings = {
         'studies.export.dir': tempfile.mkdtemp(),
@@ -387,7 +387,7 @@ def celery(request):
     Session.add(datastore.User(key=settings['celery.blame']))
     Session.flush()
 
-    commitmock = mock.patch('occams_studies.tasks.Session.commit')
+    commitmock = mock.patch('occams.tasks.Session.commit')
     commitmock.start()
 
     def cleanup():

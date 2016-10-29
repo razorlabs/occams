@@ -1,13 +1,13 @@
 class TestSchemaPlan:
 
-    def test_list_not_include_private(self, db_session):
+    def test_list_not_include_private(self, dbsession):
         """
         It should not include private data if specified.
         Note this is not the same as de-identification)
         """
         from datetime import date
         from occams_datastore import models as datastore
-        from occams_studies.exports.schema import SchemaPlan
+        from occams.exports.schema import SchemaPlan
 
         schema = datastore.Schema(
             name=u'contact',
@@ -22,23 +22,23 @@ class TestSchemaPlan:
                     is_private=True
                 )})
 
-        db_session.add_all([schema])
-        db_session.flush()
+        dbsession.add_all([schema])
+        dbsession.flush()
 
-        plans = SchemaPlan.list_all(db_session, include_private=True)
+        plans = SchemaPlan.list_all(dbsession, include_private=True)
         assert len(plans) == 1
 
-        plans = SchemaPlan.list_all(db_session, include_private=False)
+        plans = SchemaPlan.list_all(dbsession, include_private=False)
         assert len(plans) == 0
 
-    def test_list_not_include_rand(self, db_session):
+    def test_list_not_include_rand(self, dbsession):
         """
         It should not include randomization data if specified.
         """
         from datetime import date, timedelta
         from occams_datastore import models as datastore
-        from occams_studies import models
-        from occams_studies.exports.schema import SchemaPlan
+        from occams import models
+        from occams.exports.schema import SchemaPlan
 
         schema = datastore.Schema(
             name=u'vitals',
@@ -70,23 +70,23 @@ class TestSchemaPlan:
             block_number=12384,
             randid=u'8484',
             entities=[entity])
-        db_session.add_all([schema, entity, stratum])
-        db_session.flush()
+        dbsession.add_all([schema, entity, stratum])
+        dbsession.flush()
 
-        plans = SchemaPlan.list_all(db_session, include_private=True)
+        plans = SchemaPlan.list_all(dbsession, include_private=True)
         assert len(plans) == 1
 
-        plans = SchemaPlan.list_all(db_session, include_rand=False)
+        plans = SchemaPlan.list_all(dbsession, include_rand=False)
         assert len(plans) == 0
 
-    def test_patient(self, db_session):
+    def test_patient(self, dbsession):
         """
         It should add patient-specific metadata to the report
         """
         from datetime import date
         from occams_datastore import models as datastore
-        from occams_studies import models
-        from occams_studies.exports.schema import SchemaPlan
+        from occams import models
+        from occams.exports.schema import SchemaPlan
 
         schema = datastore.Schema(
             name=u'contact',
@@ -106,10 +106,10 @@ class TestSchemaPlan:
             site=models.Site(name='ucsd', title=u'UCSD'),
             pid=u'12345',
             entities=[entity])
-        db_session.add_all([schema, entity, patient])
-        db_session.flush()
+        dbsession.add_all([schema, entity, patient])
+        dbsession.flush()
 
-        plan = SchemaPlan.from_schema(db_session, schema.name)
+        plan = SchemaPlan.from_schema(dbsession, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]
@@ -123,14 +123,14 @@ class TestSchemaPlan:
         assert record.visit_date is None
         assert record.collect_date == entity.collect_date
 
-    def test_enrollment(self, db_session):
+    def test_enrollment(self, dbsession):
         """
         It should add enrollment-specific metadata to the report
         """
         from datetime import date, timedelta
         from occams_datastore import models as datastore
-        from occams_studies import models
-        from occams_studies.exports.schema import SchemaPlan
+        from occams import models
+        from occams.exports.schema import SchemaPlan
 
         schema = datastore.Schema(
             name=u'termination',
@@ -163,9 +163,9 @@ class TestSchemaPlan:
             latest_consent_date=date.today() - timedelta(3),
             termination_date=date.today(),
             entities=[entity])
-        db_session.add_all([schema, entity, patient, study, enrollment])
+        dbsession.add_all([schema, entity, patient, study, enrollment])
 
-        plan = SchemaPlan.from_schema(db_session, schema.name)
+        plan = SchemaPlan.from_schema(dbsession, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]
@@ -179,14 +179,14 @@ class TestSchemaPlan:
         assert record.visit_cycles is None
         assert record.collect_date == entity.collect_date
 
-    def test_visit(self, db_session):
+    def test_visit(self, dbsession):
         """
         It should add visit-specific metadata to the report
         """
         from datetime import date, timedelta
         from occams_datastore import models as datastore
-        from occams_studies import models
-        from occams_studies.exports.schema import SchemaPlan
+        from occams import models
+        from occams.exports.schema import SchemaPlan
 
         schema = datastore.Schema(
             name=u'vitals',
@@ -231,10 +231,10 @@ class TestSchemaPlan:
                         consent_date=date.today() - timedelta(365),
                         title=u'Study 2'))],
             entities=[entity])
-        db_session.add_all([schema, entity, patient, visit])
-        db_session.flush()
+        dbsession.add_all([schema, entity, patient, visit])
+        dbsession.flush()
 
-        plan = SchemaPlan.from_schema(db_session, schema.name)
+        plan = SchemaPlan.from_schema(dbsession, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]
@@ -250,14 +250,14 @@ class TestSchemaPlan:
         assert str(record.visit_id) == str(visit.id)
         assert record.collect_date == entity.collect_date
 
-    def test_rand(self, db_session):
+    def test_rand(self, dbsession):
         """
         It should add randomization-specific metadata to the report
         """
         from datetime import date, timedelta
         from occams_datastore import models as datastore
-        from occams_studies import models
-        from occams_studies.exports.schema import SchemaPlan
+        from occams import models
+        from occams.exports.schema import SchemaPlan
 
         schema = datastore.Schema(
             name=u'vitals',
@@ -301,10 +301,10 @@ class TestSchemaPlan:
             latest_consent_date=date.today() - timedelta(3),
             termination_date=date.today(),
             entities=[entity])
-        db_session.add_all([schema, entity, patient, enrollment, stratum])
-        db_session.flush()
+        dbsession.add_all([schema, entity, patient, enrollment, stratum])
+        dbsession.flush()
 
-        plan = SchemaPlan.from_schema(db_session, schema.name)
+        plan = SchemaPlan.from_schema(dbsession, schema.name)
         codebook = list(plan.codebook())
         query = plan.data()
         codebook_columns = [c['field'] for c in codebook]

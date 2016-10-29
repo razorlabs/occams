@@ -5,7 +5,7 @@ Test case for schema implementations and services
 import pytest
 
 
-def test_schema_attribute(db_session):
+def test_schema_attribute(dbsession):
     """
     It should implement full schema/attribute/subattribute hierarchies
     """
@@ -36,24 +36,24 @@ def test_schema_attribute(db_session):
                 })
             })
 
-    db_session.add(schema)
-    db_session.flush()
+    dbsession.add(schema)
+    dbsession.flush()
     assert 'section1' in schema.attributes
     # Works both ways
     assert 'foo' in schema.attributes
     assert 'foo' in schema.attributes['section1'].attributes
 
 
-def test_schema_defaults(db_session):
+def test_schema_defaults(dbsession):
     """
     It should set schema defaults
     """
     from occams_datastore import models
 
-    db_session.add(models.Schema(name=u'sample', title=u'Sample'))
-    db_session.flush()
+    dbsession.add(models.Schema(name=u'sample', title=u'Sample'))
+    dbsession.flush()
 
-    schema = db_session.query(models.Schema).one()
+    schema = dbsession.query(models.Schema).one()
     assert schema.description is None
     assert schema.storage == 'eav'
     assert schema.is_association is None
@@ -63,21 +63,21 @@ def test_schema_defaults(db_session):
     assert schema.modify_user is not None
 
 
-def test_schema_invalid_regexp_name(db_session):
+def test_schema_invalid_regexp_name(dbsession):
     """
     It should prevent invalid names (See RE_VALID_NAME)
     """
     from datetime import date
     from occams_datastore import models
     with pytest.raises(ValueError):
-        db_session.add(models.Schema(
+        dbsession.add(models.Schema(
             name='555SomeForm',
             title=u'Foo',
             publish_date=date(2014, 3, 31)))
-        db_session.flush()
+        dbsession.flush()
 
 
-def test_schema_unique_case_insensitive(db_session):
+def test_schema_unique_case_insensitive(dbsession):
     """
     It should enforce case-insensitive schemata
     """
@@ -85,22 +85,22 @@ def test_schema_unique_case_insensitive(db_session):
     import sqlalchemy.exc
     from occams_datastore import models
 
-    db_session.add(models.Schema(
+    dbsession.add(models.Schema(
         name='Foo',
         title=u'Foo',
         publish_date=date(2014, 3, 31)))
-    db_session.flush()
+    dbsession.flush()
 
-    db_session.add(models.Schema(
+    dbsession.add(models.Schema(
         name='foo',
         title=u'Foo',
         publish_date=date(2014, 3, 31)))
 
     with pytest.raises(sqlalchemy.exc.IntegrityError):
-        db_session.flush()
+        dbsession.flush()
 
 
-def test_schema_publish_date_unique(db_session):
+def test_schema_publish_date_unique(dbsession):
     """
     It should enforce unique publish dates
     """
@@ -110,38 +110,38 @@ def test_schema_publish_date_unique(db_session):
     from occams_datastore import models
 
     # First version
-    db_session.add(models.Schema(
+    dbsession.add(models.Schema(
         name='Foo',
         title=u'Foo',
         publish_date=date(2014, 3, 31)))
-    db_session.flush()
+    dbsession.flush()
 
     # Draft version
-    db_session.add(models.Schema(
+    dbsession.add(models.Schema(
         name='Foo',
         title=u'Foo',
         publish_date=None))
-    db_session.flush()
+    dbsession.flush()
 
     # Add another published schema (not on the same date)
     # Publish, not on the same date
-    db_session.add(models.Schema(
+    dbsession.add(models.Schema(
         name='Foo',
         title=u'Foo',
         publish_date=date(2014, 4, 1)))
-    db_session.flush()
+    dbsession.flush()
 
     # New version, same date (wrong)
-    db_session.add(models.Schema(
+    dbsession.add(models.Schema(
         name='Foo',
         title=u'Foo',
         publish_date=date(2014, 4, 1)))
 
     with pytest.raises(sqlalchemy.exc.IntegrityError):
-        db_session.flush()
+        dbsession.flush()
 
 
-def test_schema_has_private(db_session):
+def test_schema_has_private(dbsession):
     """
     It should be able to determine if a schema has private attributes
     """
@@ -159,8 +159,8 @@ def test_schema_has_private(db_session):
                 is_private=False,
                 order=0)
         })
-    db_session.add(schema)
-    db_session.flush()
+    dbsession.add(schema)
+    dbsession.flush()
 
     assert not schema.has_private
 
@@ -174,7 +174,7 @@ def test_schema_has_private(db_session):
     assert schema.has_private
 
 
-def test_json(db_session):
+def test_json(dbsession):
     """
     It should be able to load a schema from json data
     """
@@ -219,13 +219,13 @@ def test_json(db_session):
         }
     }
     """))
-    db_session.add(schema1)
-    db_session.flush()
+    dbsession.add(schema1)
+    dbsession.flush()
 
     json.dumps(schema1.to_json())
 
 
-def test_attribute_defaults(db_session):
+def test_attribute_defaults(dbsession):
     """
     It should set attribute defaults
     """
@@ -238,14 +238,14 @@ def test_attribute_defaults(db_session):
         title=u'Enter Foo',
         type=u'string',
         order=0)
-    db_session.add(attribute)
-    db_session.flush()
-    count = db_session.query(models.Attribute).count()
+    dbsession.add(attribute)
+    dbsession.flush()
+    count = dbsession.query(models.Attribute).count()
     assert count, 1 == 'Found more than one entry'
 
 
 @pytest.mark.parametrize('name', ['5', '5foo'])
-def test_attribute_invalid_regexp_name(db_session, name):
+def test_attribute_invalid_regexp_name(dbsession, name):
     """
     It should prevent invalid attribute names (See RE_VALID_NAME)
     """
@@ -256,8 +256,8 @@ def test_attribute_invalid_regexp_name(db_session, name):
         name='SomeForm',
         title=u'Foo',
         publish_date=date(2014, 3, 31))
-    db_session.add(schema)
-    db_session.flush()
+    dbsession.add(schema)
+    dbsession.flush()
 
     with pytest.raises(ValueError):
         schema.attributes[name] = models.Attribute(
@@ -268,7 +268,7 @@ def test_attribute_invalid_regexp_name(db_session, name):
 
 
 @pytest.mark.parametrize('name', ['f', 'foo', 'foo_', 'foo5'])
-def test_attribute_valid_regexp_name(db_session, name):
+def test_attribute_valid_regexp_name(dbsession, name):
     """
     It should vallow valid names (See RE_VALID_NAME)
     """
@@ -286,7 +286,7 @@ def test_attribute_valid_regexp_name(db_session, name):
         order=1)
 
 
-def test_attributea_invalid_reserved_name(db_session):
+def test_attributea_invalid_reserved_name(dbsession):
     """
     It should prevent reserved words as attribute names
     """
@@ -296,8 +296,8 @@ def test_attributea_invalid_reserved_name(db_session):
         name='SomeForm',
         title=u'Foo',
         publish_date=date(2014, 3, 31))
-    db_session.add(schema)
-    db_session.flush()
+    dbsession.add(schema)
+    dbsession.flush()
 
     with pytest.raises(ValueError):
         schema.attributes['while'] = models.Attribute(
@@ -307,7 +307,7 @@ def test_attributea_invalid_reserved_name(db_session):
             order=1)
 
 
-def test_attribute_unique_case_insensitive(db_session):
+def test_attribute_unique_case_insensitive(dbsession):
     """
     It should enforce case-insensitive attributes
     """
@@ -325,8 +325,8 @@ def test_attribute_unique_case_insensitive(db_session):
         title=u'My Attribute',
         type=u'string',
         order=0)
-    db_session.add(schema)
-    db_session.flush()
+    dbsession.add(schema)
+    dbsession.flush()
 
     schema.attributes['myattr'] = models.Attribute(
         name=u'myattr',
@@ -335,10 +335,10 @@ def test_attribute_unique_case_insensitive(db_session):
         order=1)
 
     with pytest.raises(sqlalchemy.exc.IntegrityError):
-        db_session.flush()
+        dbsession.flush()
 
 
-def test_choice_defaults(db_session):
+def test_choice_defaults(dbsession):
     """
     It should set choice defaults
     """
@@ -359,13 +359,13 @@ def test_choice_defaults(db_session):
     choice3 = models.Choice(
         attribute=attribute, name='003', title=u'Baz', order=2)
 
-    db_session.add_all([schema, attribute, choice1, choice2, choice3])
-    db_session.flush()
-    count = db_session.query(models.Choice).count()
+    dbsession.add_all([schema, attribute, choice1, choice2, choice3])
+    dbsession.flush()
+    count = dbsession.query(models.Choice).count()
     assert count, 3 == 'Did not find any choices'
 
 
-def test_category_defaults(db_session):
+def test_category_defaults(dbsession):
     """
     It should set category defaults
     """
@@ -373,14 +373,14 @@ def test_category_defaults(db_session):
     from occams_datastore import models
 
     category = models.Category(name='Tests', title=u'Test Schemata')
-    db_session.add(category)
-    db_session.flush()
+    dbsession.add(category)
+    dbsession.flush()
 
-    count = db_session.query(models.Category).count()
+    count = dbsession.query(models.Category).count()
     assert count == 1
 
 
-def test_add_category_to_schema(db_session):
+def test_add_category_to_schema(dbsession):
     """
     Scheamta should be taggable via categories
     """
@@ -388,19 +388,19 @@ def test_add_category_to_schema(db_session):
     from occams_datastore import models
 
     schema = models.Schema(name='Foo', title=u'')
-    db_session.add(schema)
-    db_session.flush()
+    dbsession.add(schema)
+    dbsession.flush()
 
     assert len(schema.categories) == 0
     category1 = models.Category(name='Tests', title=u'Test Schemata')
     schema.categories.add(category1)
-    db_session.flush()
+    dbsession.flush()
     assert len(schema.categories) == 1
     assert len(category1.schemata) == 1
     assert sorted([s.name for s in category1.schemata]) == sorted(['Foo'])
 
     schema.categories.add(category1)
-    db_session.flush()
+    dbsession.flush()
     assert len(schema.categories) == 1
     assert len(category1.schemata) == 1
 
@@ -415,12 +415,12 @@ def test_add_category_to_schema(db_session):
     # First we'll need a second schema of the same category of another
     schema2 = models.Schema(name='Bar', title=u'')
     schema2.categories.add(category2)
-    db_session.add(schema2)
-    db_session.flush()
+    dbsession.add(schema2)
+    dbsession.flush()
 
     # Now we want all the schemata of a certain category
     schemata = (
-        db_session.query(models.Schema)
+        dbsession.query(models.Schema)
         .join(models.Schema.categories)
         .filter_by(name='Bars'))
 
@@ -429,7 +429,7 @@ def test_add_category_to_schema(db_session):
         sorted(['Foo', 'Bar'])
 
 
-def test_copy_schema_basic(db_session):
+def test_copy_schema_basic(dbsession):
     """
     It should let the user copy schemata
     """
@@ -459,12 +459,12 @@ def test_copy_schema_basic(db_session):
                             '003': models.Choice(
                                 name='003', title=u'Baz', order=2)},
                         )})})
-    db_session.add(schema)
-    db_session.flush()
+    dbsession.add(schema)
+    dbsession.flush()
 
     schema_copy = deepcopy(schema)
-    db_session.add(schema_copy)
-    db_session.flush()
+    dbsession.add(schema_copy)
+    dbsession.flush()
 
     # The ones that matter for checksums
     assert schema.name == schema_copy.name

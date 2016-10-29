@@ -47,10 +47,6 @@ def main(global_config, **settings):
     for key, value in settings_defaults.items():
         settings.setdefault(key, value)
 
-    # Make sure we at least have te
-    apps = aslist(settings.get('occams.apps') or '')
-    settings['occams.apps'] = dict.fromkeys(apps)
-
     settings.update(piwik_from_config(settings))
 
     # determine if deployment is development
@@ -77,42 +73,14 @@ def main(global_config, **settings):
             (datetime.date, lambda obj, req: obj.isoformat())
         )),
     )
-    config.commit()
 
-    # Main includes
     config.include('.assets')
     config.include('.celery')
     config.include('.models')
     config.include('.routes')
     config.include('.security')
     config.scan()
-    config.commit()
-
-    # Application includes
-
-    for name in six.iterkeys(settings['occams.apps']):
-        app = import_module(name)
-        prefix = getattr(app, '__prefix__', None)
-        if not prefix:
-            # These should only appear in debug-mode during app development
-            log.debug(u'{} does not have a prefix'.format(name))
-            config.include(app)
-        else:
-            config.include(app, route_prefix=prefix)
-    config.commit()
-
-    config.add_request_method(_apps, name=str('apps'), reify=True)
-    config.commit()
 
     app = config.make_wsgi_app()
 
-    log.info('Ready')
-
     return app
-
-
-def _apps(request):
-    all_apps = six.itervalues(request.registry.settings['occams.apps'])
-    filtered_apps = iter(a for a in all_apps if a)
-    sorted_apps = sorted(filtered_apps, key=lambda f: f['title'])
-    return sorted_apps

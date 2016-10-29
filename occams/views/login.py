@@ -4,9 +4,7 @@ from pyramid.view import view_config
 import wtforms
 import wtforms.fields.html5
 
-from occams_datastore import models as datastore
-
-from .. import _
+from .. import _, models
 
 
 class LoginForm(wtforms.Form):
@@ -27,7 +25,7 @@ class LoginForm(wtforms.Form):
 @view_config(route_name='accounts.login', renderer='../templates/login.pt')
 def login(request):
 
-    db_session = request.db_session
+    dbsession = request.dbsession
     form = LoginForm(request.POST)
 
     if request.method == 'POST' and form.validate():
@@ -44,12 +42,12 @@ def login(request):
             request.session.flash(_(u'Invalid credentials'), 'danger')
         else:
             user = (
-                db_session.query(datastore.User)
+                dbsession.query(models.User)
                 .filter_by(key=form.login.data)
                 .first())
             if not user:
-                user = datastore.User(key=form.login.data)
-                db_session.add(user)
+                user = models.User(key=form.login.data)
+                dbsession.add(user)
 
             referrer = request.GET.get('referrer')
             if not referrer or request.route_path('accounts.login') in referrer:

@@ -4,12 +4,11 @@ from pyramid.view import view_config
 from sqlalchemy import orm
 import wtforms
 
-from occams.utils.forms import wtferrors, Form
-from occams_datastore import models as datastore
-from occams_datastore.models.schema import RE_VALID_NAME, RESERVED_WORDS
-
 from .. import _, models
+from ..utils.forms import wtferrors, Form
+from ..models.schema import RE_VALID_NAME, RESERVED_WORDS
 from ._utils import jquery_wtform_validator
+
 
 types = [
     {'name': 'choice', 'title': _(u'Answer choices')},
@@ -19,7 +18,8 @@ types = [
     {'name': 'number', 'title': _(u'Number')},
     {'name': 'section', 'title': _(u'Section')},
     {'name': 'string', 'title': _(u'Text')},
-    {'name': 'text', 'title': _(u'Paragraph Text')}]
+    {'name': 'text', 'title': _(u'Paragraph Text')}
+]
 
 
 @view_config(
@@ -77,7 +77,7 @@ def move_json(context, request):
     """
     check_csrf_token(request)
 
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     schema = context.schema
 
@@ -126,7 +126,7 @@ def move_json(context, request):
     for i, a in enumerate(schema.iterlist()):
         a.order = i
 
-    db_session.flush()
+    dbsession.flush()
 
     return HTTPOk()
 
@@ -149,7 +149,7 @@ def edit_json(context, request):
     """
     check_csrf_token(request)
 
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     form = FieldFormFactory(context, request).from_json(request.json_body)
 
@@ -162,8 +162,8 @@ def edit_json(context, request):
         attribute = context
     else:
         # Add the attribute and temporarily set to large display order
-        attribute = datastore.Attribute(schema=context.__parent__, order=-1)
-        db_session.add(attribute)
+        attribute = models.Attribute(schema=context.__parent__, order=-1)
+        dbsession.add(attribute)
 
     attribute.apply(form.data)
 
@@ -171,7 +171,7 @@ def edit_json(context, request):
         # now we can move the attribute
         move_json(attribute, request)
 
-    db_session.flush()
+    dbsession.flush()
 
     return view_json(attribute, request)
 
@@ -204,31 +204,31 @@ def delete_json(context, request):
     Deletes the field from the form
     """
     check_csrf_token(request)
-    db_session = request.db_session
-    db_session.delete(context)
+    dbsession = request.dbsession
+    dbsession.delete(context)
     return HTTPOk()
 
 
 def FieldFormFactory(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     if isinstance(context, models.AttributeFactory):
         is_new = True
         schema = context.__parent__
-    elif isinstance(context, datastore.Schema):
+    elif isinstance(context, models.Schema):
         is_new = True
         schema = context
-    elif isinstance(context, datastore.Attribute):
+    elif isinstance(context, models.Attribute):
         schema = context.schema
         is_new = not bool(orm.object_session(context))
 
     def unique_variable(form, field):
         query = (
-            db_session.query(datastore.Attribute)
+            dbsession.query(models.Attribute)
             .filter_by(name=field.data, schema=schema))
         if not is_new:
-            query = query.filter(datastore.Attribute.id != context.id)
-        (exists,) = db_session.query(query.exists()).one()
+            query = query.filter(models.Attribute.id != context.id)
+        (exists,) = dbsession.query(query.exists()).one()
         if exists:
             raise wtforms.ValidationError(
                 _(u'Variable name already exists in this form'))

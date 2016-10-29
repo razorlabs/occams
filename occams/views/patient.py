@@ -11,21 +11,18 @@ from sqlalchemy import orm
 import wtforms
 from zope.sqlalchemy import mark_changed
 
-from occams.utils.forms import wtferrors, ModelField, Form
-from occams_roster import generate
-from occams_datastore import models as datastore
-from occams_forms.renderers import \
-    make_form, render_form, apply_data, entity_data, \
-    form2json, modes
-
 from .. import _, log, models
+from ..utils.forms import wtferrors, ModelField, Form
+from ..generator import generate
+from ..renderers import make_form, render_form, apply_data, entity_data, form2json, modes
 from . import (
     site as site_views,
     enrollment as enrollment_views,
     visit as visit_views,
     reference_type as reference_type_views,
     study as study_views,
-    form as form_views)
+    entry as form_views
+)
 from .external_service import render_url
 
 
@@ -37,10 +34,10 @@ def search_view(context, request):
     """
     Generates data for the search result listing web view.
     """
-    db_session = request.db_session
+    dbsession = request.dbsession
     sites = [
         site
-        for site in db_session.query(models.Site).order_by(models.Site.title)
+        for site in dbsession.query(models.Site).order_by(models.Site.title)
         if request.has_permission('view', site)]
 
     return {
@@ -74,7 +71,7 @@ def search_json(context, request):
                     __last_visit_date__ -- indicates the last interaction
                                            with the patient
     """
-    db_session = request.db_session
+    dbsession = request.dbsession
     per_page = 10
 
     class SearchForm(Form):
@@ -90,14 +87,14 @@ def search_json(context, request):
     form.validate()
 
     # Only include sites that the user is a member of
-    sites = db_session.query(models.Site)
+    sites = dbsession.query(models.Site)
     site_ids = [s.id for s in sites if request.has_permission('view', s)]
 
     query = (
-        db_session.query(models.Patient)
+        dbsession.query(models.Patient)
         .options(orm.joinedload(models.Patient.site))
         .add_column(
-            db_session.query(models.Visit.visit_date)
+            dbsession.query(models.Visit.visit_date)
             .filter(models.Visit.patient_id == models.Patient.id)
             .order_by(models.Visit.visit_date.desc())
             .limit(1)
@@ -151,7 +148,7 @@ def search_json(context, request):
     request_method='GET',
     renderer='../templates/patient/view.pt')
 def view(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     # Keep track of recently viewed
     viewed = request.session.setdefault('viewed', OrderedDict())
@@ -171,14 +168,14 @@ def view(context, request):
     return {
         'phi': get_phi_entities(context, request),
         'available_studies': (
-            db_session.query(models.Study)
+            dbsession.query(models.Study)
             .order_by(models.Study.title.asc())),
         'patient': view_json(context, request),
         'enrollments': enrollment_views.list_json(
             context['enrollments'], request)['enrollments'],
         'visits': visit_views.list_json(
             context['visits'], request)['visits'],
-        'is_lab_enabled': db_session.bind.has_table('specimen')
+        'is_lab_enabled': dbsession.bind.has_table('specimen')
         }
 
 
@@ -192,8 +189,8 @@ def available_studies(context, request):
     """
     Returns a list of studies that the patient can participate in
     """
-    db_session = request.db_session
-    query = db_session.query(models.Study)
+    dbsession = request.dbsession
+    query = dbsession.query(models.Study)
 
     if 'term' in request.GET:
         wildcard = u'%' + request.GET['term'] + u'%'
@@ -216,10 +213,10 @@ def available_studies(context, request):
     xhr=True,
     renderer='json')
 def view_json(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
     patient = context
     references_query = (
-        db_session.query(models.PatientReference)
+        dbsession.query(models.PatientReference)
         .filter_by(patient=patient)
         .join(models.PatientReference.reference_type)
         .options(orm.joinedload(models.PatientReference.reference_type))
@@ -260,13 +257,13 @@ def forms_list_json(context, request):
     """
     Returns a listing of available patient forms
     """
-    db_session = request.db_session
+    dbsession = request.dbsession
     query = (
-        db_session.query(datastore.Schema)
+        dbsession.query(models.Schema)
         .join(models.patient_schema_table)
         .order_by(
-            datastore.Schema.name,
-            datastore.Schema.publish_date))
+            models.Schema.name,
+            models.Schema.publish_date))
 
     return {
         'forms': [form2json(s) for s in query]
@@ -284,11 +281,11 @@ def forms_add_json(context, request):
     Updates the available patient forms
     """
     check_csrf_token(request)
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     def check_not_study_form(form, field):
         studies = (
-            db_session.query(models.Study)
+            dbsession.query(models.Study)
             .filter(models.Study.schemata.any(id=field.data.id))
             .order_by(models.Study.title)
             .all())
@@ -299,7 +296,7 @@ def forms_add_json(context, request):
 
     def check_not_termination_form(form, field):
         studies = (
-            db_session.query(models.Study)
+            dbsession.query(models.Study)
             .filter(models.Study.termination_schema.has(name=field.data.name))
             .order_by(models.Study.title)
             .all())
@@ -310,7 +307,7 @@ def forms_add_json(context, request):
 
     def check_not_randomization_form(form, field):
         studies = (
-            db_session.query(models.Study)
+            dbsession.query(models.Study)
             .filter(models.Study.randomization_schema.has(
                 name=field.data.name))
             .order_by(models.Study.title)
@@ -322,11 +319,11 @@ def forms_add_json(context, request):
 
     def check_unique_form(form, field):
         exists = (
-            db_session.query(sa.literal(True))
+            dbsession.query(sa.literal(True))
             .filter(
-                db_session.query(datastore.Schema)
+                dbsession.query(models.Schema)
                 .join(models.patient_schema_table)
-                .filter(datastore.Schema.name == field.data.name)
+                .filter(models.Schema.name == field.data.name)
                 .exists())
             .scalar())
         if exists:
@@ -335,8 +332,8 @@ def forms_add_json(context, request):
 
     class AddForm(Form):
         form = ModelField(
-            db_session=db_session,
-            class_=datastore.Schema,
+            dbsession=dbsession,
+            class_=models.Schema,
             validators=[
                 wtforms.validators.InputRequired(),
                 check_not_study_form,
@@ -349,11 +346,11 @@ def forms_add_json(context, request):
     if not form.validate():
         raise HTTPBadRequest(json={'errors': wtferrors(form)})
 
-    db_session.execute(
+    dbsession.execute(
         models.patient_schema_table.insert()
         .values(schema_id=form.form.data.id))
 
-    mark_changed(db_session)
+    mark_changed(dbsession)
 
     return form2json(form.form.data)
 
@@ -369,12 +366,12 @@ def forms_delete_json(context, request):
     Removes a required patient form.
     """
     check_csrf_token(request)
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     def check_not_has_data(form, field):
         (exists,) = (
-            db_session.query(
-                db_session.query(datastore.Entity)
+            dbsession.query(
+                dbsession.query(models.Entity)
                 .filter_by(schema=field.data)
                 .exists())
             .one())
@@ -384,8 +381,8 @@ def forms_delete_json(context, request):
 
     class DeleteForm(Form):
         form = ModelField(
-            db_session=db_session,
-            class_=datastore.Schema,
+            dbsession=dbsession,
+            class_=models.Schema,
             validators=[
                 wtforms.validators.InputRequired(),
                 check_not_has_data])
@@ -395,11 +392,11 @@ def forms_delete_json(context, request):
     if not form.validate():
         raise HTTPBadRequest(body='<br />'.join(form.form.errors))
 
-    db_session.execute(
+    dbsession.execute(
         models.patient_schema_table.delete()
         .where(models.patient_schema_table.c.schema_id == form.form.data.id))
 
-    mark_changed(db_session)
+    mark_changed(dbsession)
 
     return HTTPOk()
 
@@ -418,7 +415,7 @@ def forms_delete_json(context, request):
     renderer='json')
 def edit_json(context, request):
     check_csrf_token(request)
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     is_new = isinstance(context, models.PatientFactory)
     form = PatientSchema(context, request).from_json(request.json_body)
@@ -429,8 +426,8 @@ def edit_json(context, request):
     if is_new:
         # if any errors occurr after this, this PID is essentially wasted
         patient = models.Patient(
-            pid=six.text_type(generate(db_session, form.site.data.name)))
-        db_session.add(patient)
+            pid=six.text_type(generate(dbsession, form.site.data.name)))
+        dbsession.add(patient)
     else:
         patient = context
 
@@ -447,10 +444,10 @@ def edit_json(context, request):
                 del inputs[(r.reference_type.id, r.reference_number)]
             except KeyError:
                 # References not in the inputs indicate they have been removed
-                db_session.delete(r)
+                dbsession.delete(r)
 
         for r in six.itervalues(inputs):
-            db_session.add(models.PatientReference(
+            dbsession.add(models.PatientReference(
                 patient=patient,
                 reference_type=r['reference_type'],
                 reference_number=r['reference_number']))
@@ -458,20 +455,20 @@ def edit_json(context, request):
     # Add the patient forms
     if is_new:
         schemata_query = (
-            db_session.query(datastore.Schema)
+            dbsession.query(models.Schema)
             .join(models.patient_schema_table))
         pending_entry = (
-            db_session.query(datastore.State)
+            dbsession.query(models.State)
             .filter_by(name=u'pending-entry')
             .one())
         for schema in schemata_query:
-            patient.entities.add(datastore.Entity(
+            patient.entities.add(models.Entity(
                 schema=schema,
                 state=pending_entry
             ))
 
-    db_session.flush()
-    db_session.refresh(patient)
+    dbsession.flush()
+    dbsession.refresh(patient)
 
     return view_json(patient, request)
 
@@ -484,14 +481,14 @@ def edit_json(context, request):
     renderer='json')
 def delete_json(context, request):
     check_csrf_token(request)
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     for entity in context.entities:
-        db_session.delete(entity)
-    db_session.flush()
+        dbsession.delete(entity)
+    dbsession.flush()
 
-    db_session.delete(context)
-    db_session.flush()
+    dbsession.delete(context)
+    dbsession.flush()
 
     viewed = request.session.setdefault('viewed', OrderedDict())
 
@@ -533,14 +530,14 @@ def form(context, request):
     XXX: Cannot merge into single view
         because of the way patient forms are handled
     """
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     patient = context.__parent__.__parent__
     schema = context.schema
 
     (is_phi,) = (
-        db_session.query(
-            db_session.query(models.patient_schema_table)
+        dbsession.query(
+            dbsession.query(models.patient_schema_table)
             .filter_by(schema_id=schema.id)
             .exists())
         .one())
@@ -552,12 +549,12 @@ def form(context, request):
         # We cannot determine which study this form will be applied to
         # so just use any version from active studies
         available_schemata = (
-            db_session.query(datastore.Schema)
+            dbsession.query(models.Schema)
             .join(models.study_schema_table)
             .join(models.Study)
-            .filter(datastore.Schema.name == context.schema.name)
-            .filter(datastore.Schema.publish_date != sa.null())
-            .filter(datastore.Schema.retract_date == sa.null()))
+            .filter(models.Schema.name == context.schema.name)
+            .filter(models.Schema.publish_date != sa.null())
+            .filter(models.Schema.retract_date == sa.null()))
         allowed_versions = sorted(set(
             s.publish_date for s in available_schemata))
     else:
@@ -574,7 +571,7 @@ def form(context, request):
         transition = modes.AUTO
 
     Form = make_form(
-        db_session,
+        dbsession,
         context.schema,
         entity=context,
         show_metadata=show_metadata,
@@ -589,8 +586,8 @@ def form(context, request):
             raise HTTPForbidden()
         if form.validate():
             upload_dir = request.registry.settings['studies.blob.dir']
-            apply_data(db_session, context, form.data, upload_dir)
-            db_session.flush()
+            apply_data(dbsession, context, form.data, upload_dir)
+            dbsession.flush()
             request.session.flash(
                 _(u'Changes saved to: %s' % context.schema.title), 'success')
             return HTTPFound(location=previous_url)
@@ -612,22 +609,22 @@ def form(context, request):
 
 
 def get_phi_entities(context, request):
-    db_session = request.db_session
+    dbsession = request.dbsession
     return (
-        db_session.query(datastore.Entity)
-        .join(datastore.Context)
-        .filter(datastore.Context.external == u'patient')
-        .filter(datastore.Context.key == context.id)
-        .join(datastore.Entity.schema)
+        dbsession.query(models.Entity)
+        .join(models.Context)
+        .filter(models.Context.external == u'patient')
+        .filter(models.Context.key == context.id)
+        .join(models.Entity.schema)
         .join(models.patient_schema_table)
-        .order_by(datastore.Schema.title))
+        .order_by(models.Schema.title))
 
 
 def PatientSchema(context, request):
     """
     Declares data format expected for managing patient properties
     """
-    db_session = request.db_session
+    dbsession = request.dbsession
 
     def check_reference_format(form, field):
         type_ = form.reference_type.data
@@ -641,7 +638,7 @@ def PatientSchema(context, request):
         type_ = form.reference_type.data
         number = form.reference_number.data
         query = (
-            db_session.query(models.PatientReference)
+            dbsession.query(models.PatientReference)
             .filter_by(reference_type=type_, reference_number=number))
         if isinstance(context, models.Patient):
             query = query.filter(models.PatientReference.patient != context)
@@ -657,7 +654,7 @@ def PatientSchema(context, request):
 
     class ReferenceForm(Form):
         reference_type = ModelField(
-            db_session=db_session,
+            dbsession=dbsession,
             class_=models.ReferenceType,
             validators=[
                 wtforms.validators.InputRequired()])
@@ -669,7 +666,7 @@ def PatientSchema(context, request):
 
     class PatientForm(Form):
         site = ModelField(
-            db_session=db_session,
+            dbsession=dbsession,
             class_=models.Site,
             validators=[
                 wtforms.validators.InputRequired(),
