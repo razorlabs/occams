@@ -1,0 +1,31 @@
+<html metal:use-macro="load: ../master.pt">
+
+ <!--! We don't need to show the navbar when logging in -->
+  <metal:navbar-slot fill-slot="navbar-slot" />
+
+  <metal:content-slot fill-slot="content-slot">
+      <form class="form-login"
+          role="form"
+          method="POST"
+          action="${request.current_route_path()}">
+        <h2 class="form-login-heading" i18n:translate="">Please enter your access code</h2>
+        <input type="text" class="form-control" placeholder="form_access_code" name='access_code'/>
+        <button class="btn btn-lg btn-primary btn-block" type="submit" i18n:translate="">Log in</button>
+      </form>
+
+    <!--!
+    <form class="form-login"
+        role="form"
+        method="POST"
+        action="${request.current_route_path()}">
+      <h2 class="form-login-heading" i18n:translate="">Please enter your access code</h2>
+      <tal:alerts define="types python:['danger', 'warning', 'success', 'info']" repeat="type types">
+        <div class="alert alert-${type}" tal:define="alerts python:request.session.pop_flash(type)" tal:repeat="alert alerts">${alert}</div>
+      </tal:alerts>
+      ${form.login(class_='form-control', placeholder=form.login.label.text, autofocus=True, maxlength=32)}
+      <button class="btn btn-lg btn-primary btn-block" type="submit" i18n:translate="">Log in</button>
+    </form>
+-->
+  </metal:content-slot>
+
+</html>
