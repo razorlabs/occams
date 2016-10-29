@@ -14,7 +14,7 @@ pyramid_debugtoolbar
 # Unit tests
 pytest
 pytest-cov
-fake-factory
+factory_boy
 WebTest
 beautifulsoup4
 mock

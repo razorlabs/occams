@@ -10,7 +10,7 @@ def test_schema_attribute(dbsession):
     It should implement full schema/attribute/subattribute hierarchies
     """
     from datetime import date
-    from occams_datastore import models
+    from occams import models
     schema = models.Schema(
         name=u'aform',
         title=u'A Form',
@@ -48,7 +48,7 @@ def test_schema_defaults(dbsession):
     """
     It should set schema defaults
     """
-    from occams_datastore import models
+    from occams import models
 
     dbsession.add(models.Schema(name=u'sample', title=u'Sample'))
     dbsession.flush()
@@ -68,7 +68,7 @@ def test_schema_invalid_regexp_name(dbsession):
     It should prevent invalid names (See RE_VALID_NAME)
     """
     from datetime import date
-    from occams_datastore import models
+    from occams import models
     with pytest.raises(ValueError):
         dbsession.add(models.Schema(
             name='555SomeForm',
@@ -83,7 +83,7 @@ def test_schema_unique_case_insensitive(dbsession):
     """
     from datetime import date
     import sqlalchemy.exc
-    from occams_datastore import models
+    from occams import models
 
     dbsession.add(models.Schema(
         name='Foo',
@@ -107,7 +107,7 @@ def test_schema_publish_date_unique(dbsession):
 
     from datetime import date
     import sqlalchemy.exc
-    from occams_datastore import models
+    from occams import models
 
     # First version
     dbsession.add(models.Schema(
@@ -146,7 +146,7 @@ def test_schema_has_private(dbsession):
     It should be able to determine if a schema has private attributes
     """
     from datetime import date
-    from occams_datastore import models
+    from occams import models
     schema = models.Schema(
         name='Foo',
         title=u'Foo',
@@ -179,7 +179,7 @@ def test_json(dbsession):
     It should be able to load a schema from json data
     """
     import json
-    from occams_datastore import models
+    from occams import models
     schema1 = models.Schema.from_json(json.loads("""
     {
         "name": "sample",
@@ -229,7 +229,7 @@ def test_attribute_defaults(dbsession):
     """
     It should set attribute defaults
     """
-    from occams_datastore import models
+    from occams import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo')
     attribute = models.Attribute(
@@ -250,7 +250,7 @@ def test_attribute_invalid_regexp_name(dbsession, name):
     It should prevent invalid attribute names (See RE_VALID_NAME)
     """
     from datetime import date
-    from occams_datastore import models
+    from occams import models
 
     schema = models.Schema(
         name='SomeForm',
@@ -273,7 +273,7 @@ def test_attribute_valid_regexp_name(dbsession, name):
     It should vallow valid names (See RE_VALID_NAME)
     """
     from datetime import date
-    from occams_datastore import models
+    from occams import models
 
     schema = models.Schema(
         name='SomeForm',
@@ -291,7 +291,7 @@ def test_attributea_invalid_reserved_name(dbsession):
     It should prevent reserved words as attribute names
     """
     from datetime import date
-    from occams_datastore import models
+    from occams import models
     schema = models.Schema(
         name='SomeForm',
         title=u'Foo',
@@ -313,7 +313,7 @@ def test_attribute_unique_case_insensitive(dbsession):
     """
     from datetime import date
     import sqlalchemy.exc
-    from occams_datastore import models
+    from occams import models
 
     schema = models.Schema(
         name='Foo',
@@ -343,7 +343,7 @@ def test_choice_defaults(dbsession):
     It should set choice defaults
     """
 
-    from occams_datastore import models
+    from occams import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo')
     attribute = models.Attribute(
@@ -370,7 +370,7 @@ def test_category_defaults(dbsession):
     It should set category defaults
     """
 
-    from occams_datastore import models
+    from occams import models
 
     category = models.Category(name='Tests', title=u'Test Schemata')
     dbsession.add(category)
@@ -385,7 +385,7 @@ def test_add_category_to_schema(dbsession):
     Scheamta should be taggable via categories
     """
 
-    from occams_datastore import models
+    from occams import models
 
     schema = models.Schema(name='Foo', title=u'')
     dbsession.add(schema)
@@ -434,7 +434,7 @@ def test_copy_schema_basic(dbsession):
     It should let the user copy schemata
     """
     from copy import deepcopy
-    from occams_datastore import models
+    from occams import models
 
     schema = models.Schema(
         name='Foo',

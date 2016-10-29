@@ -386,7 +386,7 @@ class TestDeleteJson:
         """
         It should also remove termination forms.
         """
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         enrollment = factories.EnrollmentFactory.create()

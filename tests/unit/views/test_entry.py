@@ -4,7 +4,7 @@ import pytest
 class Test_view_json:
 
     def _call_fut(self, *args, **kw):
-        from occams.views.form import view_json as view
+        from occams.views.entry import view_json as view
         return view(*args, **kw)
 
     def test_with_state(self, req, dbsession):
@@ -13,17 +13,17 @@ class Test_view_json:
         """
         from datetime import date
         import mock
-        from occams_datastore import models as datastore
+        from occams import models
 
-        myfirst = datastore.Schema(
+        myfirst = models.Schema(
             name=u'myfirst',
             title=u'My First Schema',
             publish_date=date.today()
         )
-        mydata = datastore.Entity(
+        mydata = models.Entity(
             schema=myfirst,
             state=(
-                dbsession.query(datastore.State)
+                dbsession.query(models.State)
                 .filter_by(name=u'pending-entry')
                 .one()))
         dbsession.add(mydata)
@@ -41,15 +41,15 @@ class Test_view_json:
         It should generate none if no state data is available
         """
         import mock
-        from occams_datastore import models as datastore
+        from occams import models
         from datetime import date
 
-        myfirst = datastore.Schema(
+        myfirst = models.Schema(
             name=u'myfirst',
             title=u'My First Schema',
             publish_date=date.today()
         )
-        mydata = datastore.Entity(schema=myfirst)
+        mydata = models.Entity(schema=myfirst)
         dbsession.add(mydata)
         dbsession.flush()
         mydata.__parent__ = mock.MagicMock()
@@ -64,7 +64,7 @@ class Test_view_json:
 class Test_available_schemata:
 
     def _call_fut(self, *args, **kw):
-        from occams.views.form import available_schemata as view
+        from occams.views.entry import available_schemata as view
         return view(*args, **kw)
 
     def test_exclude_retracted(self, req, dbsession, config, factories):
@@ -90,7 +90,7 @@ class Test_available_schemata:
 class Test_markup_ajax:
 
     def _call_fut(self, *args, **kw):
-        from occams.views.form import markup_ajax as view
+        from occams.views.entry import markup_ajax as view
         return view(*args, **kw)
 
     def test_no_metadata(self, req, dbsession, config, factories):
@@ -120,15 +120,14 @@ class Test_markup_ajax:
 class Test_add_json:
 
     def _call_fut(self, *args, **kw):
-        from occams.views.form import add_json as view
+        from occams.views.entry import add_json as view
         return view(*args, **kw)
 
     def test_add_to_patient(self, req, dbsession):
         from datetime import date
-        from occams_datastore import models as datastore
         from occams import models
 
-        schema = datastore.Schema(
+        schema = models.Schema(
             name=u'schema',
             title=u'Schema',
             publish_date=date.today())
@@ -153,20 +152,20 @@ class Test_add_json:
             'schema': schema.id,
             'collect_date': str(date.today()),
         }
-        factory = models.FormFactory(req, patient)
+        factory = models.FormFactory(req)
+        factory.__parent__ = patient
         self._call_fut(factory, req)
 
-        contexts = dbsession.query(datastore.Context).all()
+        contexts = dbsession.query(models.Context).all()
 
         assert len(contexts) == 1
         assert contexts[0].entity.schema == schema
 
     def test_add_to_visit(self, req, dbsession):
         from datetime import date
-        from occams_datastore import models as datastore
         from occams import models
 
-        schema = datastore.Schema(
+        schema = models.Schema(
             name=u'schema',
             title=u'Schema',
             publish_date=date.today())
@@ -198,10 +197,11 @@ class Test_add_json:
             'schema': schema.id,
             'collect_date': str(date.today()),
         }
-        factory = models.FormFactory(req, visit)
+        factory = models.FormFactory(req)
+        factory.__parent__ = visit
         self._call_fut(factory, req)
 
-        contexts = dbsession.query(datastore.Context).all()
+        contexts = dbsession.query(models.Context).all()
 
         assert len(contexts) == 2
         assert sorted(['patient', 'visit']) == \
@@ -219,12 +219,11 @@ class Test_add_json:
         """
         from datetime import date, timedelta
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_datastore import models as datastore
         from occams import models
 
         cycle = models.Cycle(name='week-1', title=u'', week=1)
 
-        schema = datastore.Schema(
+        schema = models.Schema(
             name=u'sample', title=u'', publish_date=date.today())
 
         study = models.Study(

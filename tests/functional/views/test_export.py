@@ -1,5 +1,5 @@
 import pytest
-from occams.testing import USERID, make_environ, get_csrf_token
+from tests.testing import USERID, make_environ, get_csrf_token
 
 
 class TestPermissionsAbout:
@@ -9,12 +9,12 @@ class TestPermissionsAbout:
     @pytest.fixture(autouse=True)
     def populate(self, app, dbsession):
         import transaction
-        from occams_datastore import models as datastore
+        from occams import models
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            dbsession.add(datastore.User(key=USERID))
+            dbsession.add(models.User(key=USERID))
 
     @pytest.mark.parametrize('group', ['administrator', 'consumer'])
     def test_allowed(self, app, dbsession, group):
@@ -37,12 +37,12 @@ class TestExportViewPermissionsFaq:
     @pytest.fixture(autouse=True)
     def populate(self, app, dbsession):
         import transaction
-        from occams_datastore import models as datastore
+        from occams import models
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            dbsession.add(datastore.User(key=USERID))
+            dbsession.add(models.User(key=USERID))
 
     @pytest.mark.parametrize('group', ['administrator', 'manager', 'consumer'])
     def test_allowed(self, app, dbsession, group):
@@ -65,12 +65,12 @@ class TestPermissionsCheckout:
     @pytest.fixture(autouse=True)
     def populate(self, app, dbsession):
         import transaction
-        from occams_datastore import models as datastore
+        from occams import models
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            dbsession.add(datastore.User(key=USERID))
+            dbsession.add(models.User(key=USERID))
 
     @pytest.mark.parametrize('group', ['administrator', 'manager', 'consumer'])
     def test_allowed(self, app, dbsession, group):
@@ -93,12 +93,12 @@ class TestPermissionsStatus:
     @pytest.fixture(autouse=True)
     def populate(self, app, dbsession):
         import transaction
-        from occams_datastore import models as datastore
+        from occams import models
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            dbsession.add(datastore.User(key=USERID))
+            dbsession.add(models.User(key=USERID))
 
     @pytest.mark.parametrize('group', ['administrator', 'manager', 'consumer'])
     def test_allowed(self, app, dbsession, group):
@@ -121,12 +121,12 @@ class TestPermissionsStatusJSON:
     @pytest.fixture(autouse=True)
     def populate(self, app, dbsession):
         import transaction
-        from occams_datastore import models as datastore
+        from occams import models
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            dbsession.add(datastore.User(key=USERID))
+            dbsession.add(models.User(key=USERID))
 
     @pytest.mark.parametrize('group', ['administrator', 'manager', 'consumer'])
     def test_allowed(self, app, dbsession, group):
@@ -149,12 +149,12 @@ class TestPermissionsNotifications:
     @pytest.fixture(autouse=True)
     def populate(self, app, dbsession):
         import transaction
-        from occams_datastore import models as datastore
+        from occams import models
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            dbsession.add(datastore.User(key=USERID))
+            dbsession.add(models.User(key=USERID))
 
     @pytest.mark.parametrize('group', ['administrator', 'manager', 'consumer'])
     def test_allowed(self, app, dbsession, group):
@@ -177,13 +177,12 @@ class TestPersmissionsDelete:
     @pytest.fixture(autouse=True)
     def populate(self, app, dbsession):
         import transaction
-        from occams_datastore import models as datastore
         from occams import models
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            user = datastore.User(key=USERID)
+            user = models.User(key=USERID)
             dbsession.info['blame'] = user
             dbsession.add(user)
             export = models.Export(owner_user=user)
@@ -206,9 +205,9 @@ class TestPersmissionsDelete:
 
     def test_not_owner(self, app, dbsession):
         import transaction
-        from occams_datastore import models as datastore
+        from occams import models
         with transaction.manager:
-            dbsession.add(datastore.User(key='somebody_else'))
+            dbsession.add(models.User(key='somebody_else'))
         environ = make_environ(userid='somebody_else')
         csrf_token = get_csrf_token(app, environ)
         app.delete(
@@ -229,12 +228,12 @@ class TestPersmissionsCodebook:
     @pytest.fixture(autouse=True)
     def populate(self, app, dbsession):
         import transaction
-        from occams_datastore import models as datastore
+        from occams import models
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            dbsession.add(datastore.User(key=USERID))
+            dbsession.add(models.User(key=USERID))
 
     @pytest.mark.parametrize('group', ['administrator', 'manager', 'consumer'])
     def test_allowed(self, app, dbsession, group):
@@ -257,12 +256,12 @@ class TestPersmissionsCodebookJSON:
     @pytest.fixture(autouse=True)
     def populate(self, app, dbsession):
         import transaction
-        from occams_datastore import models as datastore
+        from occams import models
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            dbsession.add(datastore.User(key=USERID))
+            dbsession.add(models.User(key=USERID))
 
     @pytest.mark.parametrize('group', ['administrator', 'manager', 'consumer'])
     def test_allowed(self, app, dbsession, group):
@@ -296,12 +295,12 @@ class TestPersmissionsCodebookDownload:
     def populate(self, request, app, dbsession):
         import os
         import transaction
-        from occams_datastore import models as datastore
+        from occams import models
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            dbsession.add(datastore.User(key=USERID))
+            dbsession.add(models.User(key=USERID))
 
         # XXX: need to somehow get the settings so we can consitently
         #      get the correct directory
@@ -336,12 +335,11 @@ class TestPermissionsDownload:
         import os
         import transaction
         from occams import models
-        from occams_datastore import models as datastore
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            user = datastore.User(key=USERID)
+            user = models.User(key=USERID)
             dbsession.info['blame'] = user
             dbsession.add(user)
             export = models.Export(
@@ -369,9 +367,9 @@ class TestPermissionsDownload:
 
     def test_not_owner(self, app, dbsession):
         import transaction
-        from occams_datastore import models as datastore
+        from occams import models
         with transaction.manager:
-            dbsession.add(datastore.User(key='somebody_else'))
+            dbsession.add(models.User(key='somebody_else'))
         environ = make_environ(userid='somebody_else')
         app.get(self.url, extra_environ=environ, status=403)
 

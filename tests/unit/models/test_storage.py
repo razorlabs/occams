@@ -14,12 +14,12 @@ def test_state_unique_name(dbsession):
     It should only allow states with unique names
     """
     import sqlalchemy.exc
-    from occams_datastore import models
+    from occams import models
 
-    dbsession.add(models.State(name=u'pending-entry', title=u'Pending Entry'))
+    dbsession.add(models.State(name=u'a-unique-name', title='A unique name'))
     dbsession.flush()
 
-    dbsession.add(models.State(name=u'pending-entry', title=u'Pending Entry'))
+    dbsession.add(models.State(name=u'a-unique-name', title='A unique name'))
     with pytest.raises(sqlalchemy.exc.IntegrityError):
         dbsession.flush()
 
@@ -29,11 +29,12 @@ def test_state_entity_relationship(dbsession):
     It should implement state/entity relationship
     """
     from datetime import date
-    from occams_datastore import models
+    from occams import models
 
     schema = models.Schema(name=u'Foo', title=u'Foo',
                            publish_date=date(2000, 1, 1))
-    pending_entry = models.State(name=u'pending-entry', title=u'Pending Entry')
+    pending_entry = \
+        dbsession.query(models.State).filter_by(name=u'pending-entry').one()
     entity = models.Entity(schema=schema)
     dbsession.add_all([pending_entry, entity])
     dbsession.flush()
@@ -52,8 +53,8 @@ def test_entity_add_unpublished_schema(dbsession):
     """
     It should not allow adding entities related to unpublished schemata
     """
-    from occams_datastore import models
-    from occams_datastore.exc import InvalidEntitySchemaError
+    from occams import models
+    from occams.exc import InvalidEntitySchemaError
 
     schema = models.Schema(name=u'Foo', title=u'')
     entity = models.Entity(schema=schema)
@@ -67,7 +68,7 @@ def test_entity_default_collect_date(dbsession):
     It should default to today's date as the collect_date if not is provided
     """
     from datetime import date
-    from occams_datastore import models
+    from occams import models
     # Make sure the system can auto-assign a collect date for the entry
 
     schema = models.Schema(name=u'Foo', title=u'',
@@ -109,7 +110,7 @@ def check_entity_types(dbsession, type, simple, update, collection):
     It should properly handle supported types
     """
     from datetime import date
-    from occams_datastore import models
+    from occams import models
 
     schema = models.Schema(
         name=u'Foo', title=u'',
@@ -193,7 +194,7 @@ def test_entity_force_date(dbsession):
     (Sometimes applications will blindly assign datetimes...)
     """
     from datetime import date, datetime
-    from occams_datastore import models
+    from occams import models
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
@@ -222,7 +223,7 @@ def test_entity_choices(dbsession):
     It should properly handle choices
     """
     from datetime import date
-    from occams_datastore import models
+    from occams import models
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
@@ -278,7 +279,7 @@ def test_entity_blob_type(dbsession):
     It should be able to keep track of file uploads (will not be storing in DB)
     """
 
-    from occams_datastore import models
+    from occams import models
     from datetime import date
 
     schema = models.Schema(name='HasBlob', title=u'',
@@ -329,8 +330,8 @@ def check_value_min_constraint(dbsession, type_, limit, below, equal, over):
     It should validate against minimum constratins
     """
     from datetime import date
-    from occams_datastore import models
-    from occams_datastore.exc import ConstraintError
+    from occams import models
+    from occams.exc import ConstraintError
 
     schema = models.Schema(
         name=u'Foo', title=u'', publish_date=date(2000, 1, 1))
@@ -379,8 +380,8 @@ def check_value_max_constraint(dbsession, type_, limit, below, equal, over):
     It should validate against maximum constraints
     """
     from datetime import date
-    from occams_datastore import models
-    from occams_datastore.exc import ConstraintError
+    from occams import models
+    from occams.exc import ConstraintError
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
@@ -414,8 +415,8 @@ def test_validator_min_constraint(dbsession):
     It should validate string/number value min/max
     """
     from datetime import date
-    from occams_datastore import models
-    from occams_datastore.exc import ConstraintError
+    from occams import models
+    from occams.exc import ConstraintError
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
@@ -451,8 +452,8 @@ def test_validator_max_constraint(dbsession):
     It should validate string/number value min/max
     """
     from datetime import date
-    from occams_datastore import models
-    from occams_datastore.exc import ConstraintError
+    from occams import models
+    from occams.exc import ConstraintError
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
@@ -488,8 +489,8 @@ def test_validator_pattern_constraint(dbsession):
     It should validate against string pattern constraints
     """
     from datetime import date
-    from occams_datastore import models
-    from occams_datastore.exc import ConstraintError
+    from occams import models
+    from occams.exc import ConstraintError
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))
@@ -526,8 +527,8 @@ def test_choice_constraint(dbsession):
     It should validate against choice constraints
     """
     from datetime import date
-    from occams_datastore import models
-    from occams_datastore.exc import ConstraintError
+    from occams import models
+    from occams.exc import ConstraintError
 
     schema = models.Schema(name=u'Foo', title=u'',
                            publish_date=date(2000, 1, 1))

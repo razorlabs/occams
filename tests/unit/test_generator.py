@@ -19,7 +19,7 @@ class TestOurNumberPatern:
         """
         It should not allow ambigous numbers
         """
-        from occams_roster.generator import OUR_PATTERN
+        from occams.generator import OUR_PATTERN
         assert not OUR_PATTERN.match(number)
 
     @pytest.mark.parametrize('number', [
@@ -34,7 +34,7 @@ class TestOurNumberPatern:
         """
         It should not allow vowels
         """
-        from occams_roster.generator import OUR_PATTERN
+        from occams.generator import OUR_PATTERN
         assert not OUR_PATTERN.match(number)
         assert not OUR_PATTERN.match(number)
 
@@ -46,7 +46,7 @@ class TestOurNumberPatern:
         """
         It should allow valid numbers
         """
-        from occams_roster.generator import OUR_PATTERN
+        from occams.generator import OUR_PATTERN
         assert OUR_PATTERN.match(number)
 
 
@@ -56,28 +56,31 @@ class TestGenerator:
         """
         It should create an unregisterd site when generating an OUR number
         """
-        from occams_roster import generate, models, OUR_PATTERN
+        from occams import models
+        from occams.generator import generate, OUR_PATTERN
         res = generate(dbsession, u'AEH')
         assert OUR_PATTERN.match(res)
-        assert 1 == dbsession.query(models.Site).count()
+        assert 1 == dbsession.query(models.RosterSite).count()
 
     def test_existing_site(self, dbsession):
         """
         It should re-use previously registered sites
         """
-        from occams_roster import generate, models, OUR_PATTERN
-        dbsession.add(models.Site(title=u'AEH'))
+        from occams import models
+        from occams.generator import generate, OUR_PATTERN
+        dbsession.add(models.RosterSite(title=u'AEH'))
         dbsession.flush()
 
         res = generate(dbsession, u'AEH')
         assert OUR_PATTERN.match(res)
-        assert 1 == dbsession.query(models.Site).count()
+        assert 1 == dbsession.query(models.RosterSite).count()
 
     def test_issues_only_valid_our_numbers(self, dbsession):
         """
         It should only generate valid OUR numbers
         """
-        from occams_roster import generate, models, OUR_PATTERN
+        from occams import models
+        from occams.generator import generate, OUR_PATTERN
         # eventually it will create an invalid one and mark is as invactive
         for i in range(100):
             generate(dbsession, u'AEH')

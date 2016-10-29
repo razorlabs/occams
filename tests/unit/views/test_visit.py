@@ -324,7 +324,7 @@ class Test_edit_json:
         It should allow the user to create cycle forms
         """
         from datetime import date, timedelta
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         form1 = datastore.Schema(
@@ -468,7 +468,7 @@ class Test_edit_json:
         It should not use retracted forms, even if there are the most recent
         """
         from datetime import date, timedelta
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         t0 = date.today()
@@ -575,7 +575,7 @@ class Test_delete_json:
         It should remove all visit-associated forms.
         """
         from datetime import date
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(
@@ -629,7 +629,7 @@ class Test_delete_json:
 class Test_form_delete_json:
 
     def _call_fut(self, *args, **kw):
-        from occams.views.form import bulk_delete_json as view
+        from occams.views.entry import bulk_delete_json as view
         return view(*args, **kw)
 
     def test_success(self, req, dbsession, check_csrf_token):
@@ -638,7 +638,7 @@ class Test_form_delete_json:
         """
         from datetime import date, timedelta
         from pyramid.httpexceptions import HTTPOk
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         cycle = models.Cycle(name='week-1', title=u'', week=1)

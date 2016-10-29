@@ -1,21 +1,6 @@
 # -*- coding: utf-8 -*-
 
 
-class TestListAll:
-
-    def test_list(self, dbsession):
-        from occams import exports
-        from occams.exports.plan import ExportPlan
-
-        class SomePlan(ExportPlan):
-            name = 'someplan'
-            title = u'Some Plan'
-
-        plans = [SomePlan]
-        exportables = exports.list_all(plans, dbsession)
-        assert sorted(['someplan']) == sorted(exportables.keys())
-
-
 class TestWriteData:
 
     def test_unicode(self, dbsession):

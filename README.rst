@@ -66,17 +66,6 @@ repo, which can lead you to lose a lot of work and sanity::
   $ cd src
   $ git clone git@github.com:YOURID/occams
 
-If you plan on working on add-ons, it is recommended you install the
-following as well::
-
-  $ git clone git@github.com:YOURID/occams_datastore
-  $ git clone git@github.com:YOURID/occams_forms
-  $ git clone git@github.com:YOURID/occams_accounts
-  $ git clone git@github.com:YOURID/occams_roster
-  $ git clone git@github.com:YOURID/occams_studies
-  $ git clone git@github.com:YOURID/occams_lims
-
-
 Now that your projects are checked out, copy and update the ``requirements.txt``
 found in the ``occams`` project directory.::
 
@@ -150,5 +139,5 @@ If your project's revision **continues** the history::
 If your project's revision depends on a **another** project's revision::
 
   $ alembic -c /path/to/ini revision -m "MESSAGE" --head=MYAPP@base --depends-on=REVISION --version-path=/path/to/app/versions
-  
+
 

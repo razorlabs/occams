@@ -20,29 +20,24 @@ class TestAdd:
         It should render only published schemata
         """
         from datetime import date
-        from occams_datastore import models as datastore
         from occams import models
-        from occams.exports.schema import SchemaPlan
-
-        req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
 
         # No schemata
         res = self._call_fut(models.ExportFactory(req), req)
-        assert len(res['exportables']) == 0  # Only pre-cooked
+        assert len(res['exportables']) == 3  # Only pre-cooked
 
         # Not-yet-published schemata
-        schema = datastore.Schema(
-            name=u'vitals', title=u'Vitals')
+        schema = models.Schema(name=u'vitals', title=u'Vitals')
         dbsession.add(schema)
         dbsession.flush()
         res = self._call_fut(models.ExportFactory(req), req)
-        assert len(res['exportables']) == 0
+        assert len(res['exportables']) == 3
 
         # Published schemata
         schema.publish_date = date.today()
         dbsession.flush()
         res = self._call_fut(models.ExportFactory(req), req)
-        assert len(res['exportables']) == 1
+        assert len(res['exportables']) == 4
 
     def test_post_empty(self, req, dbsession):
         """
@@ -79,19 +74,18 @@ class TestAdd:
         import mock
         from pyramid.httpexceptions import HTTPFound
         from webob.multidict import MultiDict
-        from occams_datastore import models as datastore
         from occams import models
         from occams.exports.schema import SchemaPlan
 
         req.registry.settings['app.export.dir'] = '/tmp'
         req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
 
-        blame = datastore.User(key=u'joe')
+        blame = models.User(key=u'joe')
         dbsession.add(blame)
         dbsession.flush()
         dbsession.info['blame'] = blame
 
-        schema = datastore.Schema(
+        schema = models.Schema(
             name=u'vitals', title=u'Vitals', publish_date=date.today())
         dbsession.add(schema)
         dbsession.flush()
@@ -116,21 +110,20 @@ class TestAdd:
         """
         from datetime import date
         from webob.multidict import MultiDict
-        from occams_datastore import models as datastore
         from occams import models
         from occams.exports.schema import SchemaPlan
 
         config.registry.settings['app.export.limit'] = 0
         req.registry.settings['studies.export.plans'] = [SchemaPlan.list_all]
 
-        blame = datastore.User(key=u'joe')
+        blame = models.User(key=u'joe')
         dbsession.add(blame)
         dbsession.flush()
         dbsession.info['blame'] = blame
 
         previous_export = models.Export(
             owner_user=(
-                dbsession.query(datastore.User)
+                dbsession.query(models.User)
                 .filter_by(key='joe')
                 .one()),
             contents=[{
@@ -163,27 +156,26 @@ class TestStatusJSON:
         It should return the authenticated user's exports
         """
         import mock
-        from occams_datastore import models as datastore
         from occams import models
 
         req.registry.settings['studies.export.dir'] = '/tmp'
 
-        blame = datastore.User(key=u'joe')
+        blame = models.User(key=u'joe')
         dbsession.add(blame)
-        dbsession.add(datastore.User(key='jane'))
+        dbsession.add(models.User(key='jane'))
         dbsession.flush()
         dbsession.info['blame'] = blame
 
         export1 = models.Export(
             owner_user=(
-                dbsession.query(datastore.User)
+                dbsession.query(models.User)
                 .filter_by(key='joe')
                 .one()),
             contents=[],
             status='pending')
         export2 = models.Export(
             owner_user=(
-                dbsession.query(datastore.User)
+                dbsession.query(models.User)
                 .filter_by(key='jane')
                 .one()),
             contents=[],
@@ -206,7 +198,6 @@ class TestStatusJSON:
         """
         from datetime import datetime, timedelta
         import mock
-        from occams_datastore import models as datastore
         from occams import models
 
         EXPIRE_DAYS = 10
@@ -214,7 +205,7 @@ class TestStatusJSON:
         req.registry.settings['studies.export.expire'] = EXPIRE_DAYS
         req.registry.settings['studies.export.dir'] = '/tmp'
 
-        blame = datastore.User(key=u'joe')
+        blame = models.User(key=u'joe')
         dbsession.add(blame)
         dbsession.flush()
         dbsession.info['blame'] = blame
@@ -223,7 +214,7 @@ class TestStatusJSON:
 
         export = models.Export(
             owner_user=(
-                dbsession.query(datastore.User)
+                dbsession.query(models.User)
                 .filter_by(key='joe')
                 .one()),
             contents=[],
@@ -373,16 +364,15 @@ class TestCodebookJSON:
         """
         from datetime import date
         from webob.multidict import MultiDict
-        from occams_datastore import models as datastore
         from occams import models
         from occams.exports.schema import SchemaPlan
 
-        dbsession.add(datastore.Schema(
+        dbsession.add(models.Schema(
             name=u'aform',
             title=u'',
             publish_date=date.today(),
             attributes={
-                u'myfield': datastore.Attribute(
+                u'myfield': models.Attribute(
                     name=u'myfield',
                     title=u'',
                     type=u'string',
@@ -433,17 +423,16 @@ class TestDelete:
         """
         import mock
         from pyramid.httpexceptions import HTTPOk
-        from occams_datastore import models as datastore
         from occams import models
 
-        blame = datastore.User(key=u'joe')
+        blame = models.User(key=u'joe')
         dbsession.add(blame)
         dbsession.flush()
         dbsession.info['blame'] = blame
 
         export = models.Export(
             owner_user=(
-                dbsession.query(datastore.User)
+                dbsession.query(models.User)
                 .filter_by(key='joe')
                 .one()),
             contents=[],
@@ -475,10 +464,9 @@ class TestDownload:
         It should return 404 if the record is not ready
         """
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_datastore import models as datastore
         from occams import models
 
-        blame = datastore.User(key=u'joe')
+        blame = models.User(key=u'joe')
         dbsession.add(blame)
         dbsession.flush()
         dbsession.info['blame'] = blame
@@ -486,7 +474,7 @@ class TestDownload:
         export = models.Export(
             id=123,
             owner_user=(
-                dbsession.query(datastore.User)
+                dbsession.query(models.User)
                 .filter_by(key='joe')
                 .one()),
             contents=[],

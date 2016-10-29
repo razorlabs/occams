@@ -12,7 +12,7 @@ def test_datadict_published_schema(dbsession):
     """
 
     from datetime import date, timedelta
-    from occams_datastore import models, reporting
+    from occams import models, reporting
 
     schema = models.Schema(
         name=u'A',
@@ -53,7 +53,7 @@ def test_datadict_multpile_versions(dbsession):
 
     from copy import deepcopy
     from datetime import date, timedelta
-    from occams_datastore import models, reporting
+    from occams import models, reporting
 
     today = date.today()
 
@@ -97,7 +97,7 @@ def test_datadict_multiple_choice(dbsession):
     from copy import deepcopy
     from datetime import date, timedelta
     from six import iterkeys
-    from occams_datastore import models, reporting
+    from occams import models, reporting
 
     today = date.today()
 
@@ -154,7 +154,7 @@ def test_datadict_duplicate_vocabulary_term(dbsession):
     from copy import deepcopy
     from datetime import date, timedelta
     from six import itervalues
-    from occams_datastore import models, reporting
+    from occams import models, reporting
 
     today = date.today()
 
@@ -213,7 +213,7 @@ def check_report_column_type(dbsession, ds_type, sa_type):
     """
 
     from datetime import date
-    from occams_datastore import models, reporting
+    from occams import models, reporting
 
     schema = models.Schema(
         name=u'A',
@@ -248,7 +248,7 @@ def test_build_report_expected_metadata_columns(dbsession):
     """
 
     from datetime import date
-    from occams_datastore import models, reporting
+    from occams import models, reporting
 
     today = date.today()
 
@@ -275,7 +275,7 @@ def test_build_report_scalar_values(dbsession):
     """
 
     from datetime import date
-    from occams_datastore import models, reporting
+    from occams import models, reporting
 
     today = date.today()
 
@@ -315,7 +315,7 @@ def test_build_report_datetime(dbsession):
     It should be able to cast DATE/DATETIME
     """
     from datetime import date
-    from occams_datastore import models, reporting
+    from occams import models, reporting
 
     today = date.today()
 
@@ -362,7 +362,7 @@ def test_build_report_choice_types(dbsession):
     """
 
     from datetime import date
-    from occams_datastore import models, reporting
+    from occams import models, reporting
 
     today = date.today()
 
@@ -458,7 +458,7 @@ def test_build_report_expand_none_selected(dbsession):
     It should leave all choices blank (not zero) on if no option was selected
     """
     from datetime import date
-    from occams_datastore import models, reporting
+    from occams import models, reporting
 
     today = date.today()
 
@@ -540,7 +540,7 @@ def test_build_report_ids(dbsession):
 
     from copy import deepcopy
     from datetime import date, timedelta
-    from occams_datastore import models, reporting
+    from occams import models, reporting
 
     today = date.today()
 
@@ -592,7 +592,7 @@ def test_build_report_context(dbsession):
     """
 
     from datetime import date
-    from occams_datastore import models, reporting
+    from occams import models, reporting
 
     today = date.today()
 
@@ -641,7 +641,7 @@ def test_build_report_attributes(dbsession):
     It should only include the specified columns (useful for large forms)
     """
     from datetime import date
-    from occams_datastore import models, reporting
+    from occams import models, reporting
 
     today = date.today()
 
@@ -683,7 +683,7 @@ def test_build_report_ignore_private(dbsession):
     """
 
     from datetime import date
-    from occams_datastore import models, reporting
+    from occams import models, reporting
 
     today = date.today()
 

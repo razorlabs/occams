@@ -38,7 +38,7 @@ class TestMakeExport:
         """
         from zipfile import ZipFile
         from occams.celery import Session
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models, tasks
         from occams.exports.pid import PidPlan
 

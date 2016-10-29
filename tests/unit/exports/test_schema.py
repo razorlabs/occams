@@ -6,7 +6,7 @@ class TestSchemaPlan:
         Note this is not the same as de-identification)
         """
         from datetime import date
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams.exports.schema import SchemaPlan
 
         schema = datastore.Schema(
@@ -36,7 +36,7 @@ class TestSchemaPlan:
         It should not include randomization data if specified.
         """
         from datetime import date, timedelta
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
         from occams.exports.schema import SchemaPlan
 
@@ -84,7 +84,7 @@ class TestSchemaPlan:
         It should add patient-specific metadata to the report
         """
         from datetime import date
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
         from occams.exports.schema import SchemaPlan
 
@@ -128,7 +128,7 @@ class TestSchemaPlan:
         It should add enrollment-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
         from occams.exports.schema import SchemaPlan
 
@@ -184,7 +184,7 @@ class TestSchemaPlan:
         It should add visit-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
         from occams.exports.schema import SchemaPlan
 
@@ -255,7 +255,7 @@ class TestSchemaPlan:
         It should add randomization-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
         from occams.exports.schema import SchemaPlan
 

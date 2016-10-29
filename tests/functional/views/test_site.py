@@ -1,5 +1,5 @@
 import pytest
-from occams.testing import USERID, make_environ
+from tests.testing import USERID, make_environ
 
 
 class TestPermissionsSiteList:
@@ -9,19 +9,18 @@ class TestPermissionsSiteList:
     @pytest.fixture(autouse=True)
     def populate(self, app, dbsession):
         import transaction
-        from occams_datastore import models as datastore
-        from occams import models as studies
+        from occams import models
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            blame = datastore.User(key=USERID)
+            blame = models.User(key=USERID)
             dbsession.info['blame'] = blame
             dbsession.add(blame)
             dbsession.flush()
 
-            dbsession.add(studies.Site(name=u'ucsd', title=u'UCSD'))
-            dbsession.add(studies.Site(name=u'ucla', title=u'UCSD'))
+            dbsession.add(models.Site(name=u'ucsd', title=u'UCSD'))
+            dbsession.add(models.Site(name=u'ucla', title=u'UCSD'))
 
     @pytest.mark.parametrize('group', [
         'administrator', 'manager', 'ucsd:enterer', 'ucsd:reviewer',

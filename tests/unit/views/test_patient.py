@@ -415,7 +415,7 @@ class Test_delete_json:
         """
 
         from datetime import date
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(

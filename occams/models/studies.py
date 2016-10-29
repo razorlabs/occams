@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy import orm
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.dialects.postgresql import JSONB
 
 from .groups import groups
 from .meta import Base
@@ -15,7 +16,6 @@ from .auditing import Auditable
 from .metadata import Referenceable, Describeable, Modifiable, User
 from .schema import Schema
 from .storage import Entity, State, HasEntities
-from ..utils.sql import JSON
 
 
 class StudyFactory(object):
@@ -1201,7 +1201,7 @@ class Export(Base,
         default='pending')
 
     contents = sa.Column(
-        JSON,
+        JSONB,
         nullable=False,
         doc="""
             A snapshot of the contents of this export with some metadata.

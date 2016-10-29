@@ -172,7 +172,7 @@ class TestAddSchemaJson:
         It should allow adding a schema to a study
         """
         from datetime import date
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(
@@ -198,7 +198,7 @@ class TestAddSchemaJson:
         It should also update cycle versions
         """
         from datetime import date, timedelta
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         today = date.today()
@@ -235,7 +235,7 @@ class TestAddSchemaJson:
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(name='test', title=u'')
@@ -268,7 +268,7 @@ class TestAddSchemaJson:
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(
@@ -297,7 +297,7 @@ class TestAddSchemaJson:
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(
@@ -333,7 +333,7 @@ class TestAddSchemaJson:
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(
@@ -366,7 +366,7 @@ class TestAddSchemaJson:
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(
@@ -402,7 +402,7 @@ class TestDeleteSchemaJson:
         It should remove the schema from the study and cascade to its cycles
         """
         from datetime import date
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(
@@ -467,7 +467,7 @@ class TestEditScheduleJson:
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(
@@ -507,7 +507,7 @@ class TestEditScheduleJson:
         """
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(
@@ -551,7 +551,7 @@ class TestEditScheduleJson:
         It should successfully add a schema to a cycle
         """
         from datetime import date
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(
@@ -589,7 +589,7 @@ class TestEditScheduleJson:
         It should successfully disable schema from a cycle
         """
         from datetime import date
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(
@@ -636,7 +636,7 @@ class TestAvailableSchemata:
         """
         from datetime import date
         from webob.multidict import MultiDict
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         dbsession.add_all([
@@ -653,7 +653,7 @@ class TestAvailableSchemata:
         """
         from datetime import date
         from webob.multidict import MultiDict
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         dbsession.add_all([
@@ -673,7 +673,7 @@ class TestAvailableSchemata:
         """
         from datetime import date, timedelta
         from webob.multidict import MultiDict
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         today = date.today()
@@ -695,7 +695,7 @@ class TestAvailableSchemata:
         """
         from datetime import date
         from webob.multidict import MultiDict
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         x = datastore.Schema(name='x', title=u'x', publish_date=date.today())
@@ -724,7 +724,7 @@ class TestAvailableSchemata:
         """
         from datetime import date
         from webob.multidict import MultiDict
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         x = datastore.Schema(name='x', title=u'x', publish_date=date.today())
@@ -752,7 +752,7 @@ class TestAvailableSchemata:
         """
         from datetime import date
         from webob.multidict import MultiDict
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         x = datastore.Schema(name='x', title=u'x', publish_date=date.today())
@@ -781,7 +781,7 @@ class TestAvailableSchemata:
         """
         from datetime import date, timedelta
         from webob.multidict import MultiDict
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         today = date.today()
@@ -846,7 +846,7 @@ class TestUploadRandomizationJson:
         import tempfile
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(
@@ -887,7 +887,7 @@ class TestUploadRandomizationJson:
         import csv
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(
@@ -938,7 +938,7 @@ class TestUploadRandomizationJson:
         import tempfile
         import csv
         from datetime import date
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(
@@ -993,7 +993,7 @@ class TestUploadRandomizationJson:
         import csv
         from datetime import date
         from pyramid.httpexceptions import HTTPBadRequest
-        from occams_datastore import models as datastore
+        from occams import models as datastore
         from occams import models
 
         schema = datastore.Schema(
