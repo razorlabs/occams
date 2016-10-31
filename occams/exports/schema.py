@@ -153,13 +153,13 @@ class SchemaPlan(ExportPlan):
                                for c in itervalues(attribute.choices)])
 
         footer = [
-            row('create_date', self.name, types.DATE,
+            row('created_at', self.name, types.DATE,
                 is_required=True, is_system=True),
-            row('create_user', self.name, types.STRING,
+            row('created_by', self.name, types.STRING,
                 is_required=True, is_system=True),
-            row('modify_date', self.name, types.DATE,
+            row('modified_at', self.name, types.DATE,
                 is_required=True, is_system=True),
-            row('modify_user', self.name, types.STRING, is_required=True,
+            row('modified_by', self.name, types.STRING, is_required=True,
                 is_system=True)]
 
         for column in footer:

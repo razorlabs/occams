@@ -243,8 +243,8 @@ def view_json(context, request):
             }),
         } for enrollment in patient.enrollments
           for service in enrollment.study.external_services],
-        'create_date': patient.create_date.isoformat(),
-        'modify_date': patient.modify_date.isoformat()
+        'created_at': patient.created_at.isoformat(),
+        'modified_at': patient.modified_at.isoformat()
     }
 
 

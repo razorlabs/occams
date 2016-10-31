@@ -20,4 +20,4 @@ beautifulsoup4
 mock
 
 # Developer-managed accounts
-who_dev>=0.0.2
+who_dev

@@ -1,6 +1,6 @@
 from __future__ import with_statement
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config, pool, text
 from logging.config import fileConfig
 
 # this is the Alembic Config object, which provides
@@ -70,12 +70,14 @@ def run_migrations_online():
         )
 
         with context.begin_transaction():
-            # Ensure the blame user exists before starting...
-            record = connection.execute(
-                'SELECT key FROM "user" WHERE key = %s', blame).fetchall()
-            if not record:
-                connection.execute(
-                    'INSERT INTO "user" (key) VALUES (%s)', blame)
+            connection.execute(
+                text('SET LOCAL "application.name" = :param'),
+                {'param': 'alembic'}
+            )
+            connection.execute(
+                text('SET LOCAL "application.user" = :param'),
+                {'param': blame}
+            )
             context.run_migrations()
 
 if context.is_offline_mode():

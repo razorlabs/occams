@@ -343,7 +343,7 @@ def query_exports(request):
 
     if export_expire:
         cutoff = datetime.now() - timedelta(int(export_expire))
-        query = query.filter(models.Export.modify_date >= cutoff)
+        query = query.filter(models.Export.modified_at >= cutoff)
 
     query = query.order_by(models.Export.create_date.desc())
 

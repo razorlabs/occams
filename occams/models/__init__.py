@@ -5,8 +5,6 @@ import zope.sqlalchemy
 # import or define all models here to ensure they are attached to the
 # Base.metadata prior to any initialization routines
 
-from .events import register
-
 from .roster import Site as RosterSite, Identifier  # noqa
 
 from .studies import (  # noqa
@@ -56,18 +54,12 @@ from .schema import (  # noqa
 from .metadata import User  # noqa
 
 from .storage import (  # noqa
-    nameModelMap,
     State,
     Context,
     Entity,
+    EntityAttachment,
+    EntityAttachmentBlob,
     HasEntities,
-    ValueString,
-    ValueNumber,
-    ValueDatetime,
-    ValueText,
-    ValueChoice,
-    ValueBlob,
-    BlobInfo
 )
 
 # run configure_mappers after defining all of the models to ensure
@@ -85,7 +77,7 @@ def get_session_factory(engine):
     return factory
 
 
-def get_tm_session(session_factory, transaction_manager, info=None):
+def get_tm_session(session_factory, transaction_manager):
     """
     Get a ``sqlalchemy.orm.Session`` instance backed by a transaction.
 
@@ -109,10 +101,6 @@ def get_tm_session(session_factory, transaction_manager, info=None):
 
     dbsession = session_factory()
 
-    if info:
-        dbsession.info.update(info)
-
-    register(dbsession)
     zope.sqlalchemy.register(
         dbsession, transaction_manager=transaction_manager)
 
@@ -137,11 +125,7 @@ def includeme(config):
     # make request.dbsession available for use in Pyramid
     config.add_request_method(
         # r.tm is the transaction manager used by pyramid_tm
-        lambda r: get_tm_session(
-            session_factory,
-            r.tm,
-            info={'request': r, 'settings': r.registry.settings}
-        ),
+        lambda r: get_tm_session(session_factory, r.tm),
         'dbsession',
         reify=True
     )

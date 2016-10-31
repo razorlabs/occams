@@ -1,10 +1,5 @@
-from sqlalchemy import (
-    Column, ForeignKey,
-    event,
-    DDL,
-    text,
-    Boolean, Integer, Unicode, DateTime, Sequence)
-from sqlalchemy.orm import relationship, backref
+import sqlalchemy as sa
+from sqlalchemy import orm
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from .meta import Base
@@ -20,24 +15,24 @@ class Site(Base):
 
     __tablename__ = 'rostersite'
 
-    id = Column(Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True)
 
-    title = Column(
-        Unicode,
+    title = sa.Column(
+        sa.Unicode,
         nullable=False,
         unique=True,
         doc='The name of the site, for our records')
 
-    create_date = Column(
-        DateTime,
+    create_date = sa.Column(
+        sa.DateTime(timezone=True),
         nullable=False,
-        default=text('CURRENT_TIMESTAMP'))
+        default=sa.text('CURRENT_TIMESTAMP'))
 
-    modify_date = Column(
-        DateTime,
+    modify_date = sa.Column(
+        sa.DateTime(timezone=True),
         nullable=False,
-        default=text('CURRENT_TIMESTAMP'),
-        onupdate=text('CURRENT_TIMESTAMP'))
+        default=sa.text('CURRENT_TIMESTAMP'),
+        onupdate=sa.text('CURRENT_TIMESTAMP'))
 
 
 class Identifier(Base):
@@ -47,20 +42,20 @@ class Identifier(Base):
 
     __tablename__ = 'identifier'
 
-    id = Column(
-        Integer,
+    id = sa.Column(
+        sa.Integer,
         # lowest possible OUR number that satisfies bureaucratic requirements
-        Sequence('identifier_id_pk_seq', start=START_ID),
+        sa.Sequence('identifier_id_pk_seq', start=START_ID),
         primary_key=True)
 
-    origin_id = Column(
-        Integer,
-        ForeignKey(Site.id),
+    origin_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey(Site.id),
         nullable=False)
 
-    origin = relationship(
+    origin = orm.relationship(
         Site,
-        backref=backref(
+        backref=orm.backref(
             name='identifiers',
             lazy='dynamic'),
         doc='The site that generated the OUR number')
@@ -83,40 +78,29 @@ class Identifier(Base):
         formatted = '%c%c%c-%c%c%c' % tuple(encoded)
         return formatted
 
-    is_active = Column(
-        Boolean,
+    is_active = sa.Column(
+        sa.Boolean,
         nullable=False,
         default=True,
         doc='Set to True if the OUR number is in circulation')
 
-    create_date = Column(
-        DateTime,
+    create_date = sa.Column(
+        sa.DateTime(timezone=True),
         nullable=False,
-        default=text('CURRENT_TIMESTAMP'))
+        default=sa.text('CURRENT_TIMESTAMP'))
 
-    modify_date = Column(
-        DateTime,
+    modify_date = sa.Column(
+        sa.DateTime(timezone=True),
         nullable=False,
-        default=text('CURRENT_TIMESTAMP'),
-        onupdate=text('CURRENT_TIMESTAMP'))
+        default=sa.text('CURRENT_TIMESTAMP'),
+        onupdate=sa.text('CURRENT_TIMESTAMP'))
 
     __table_args__ = dict(sqlite_autoincrement=True)
 
-
-event.listen(
+sa.event.listen(
     Identifier.__table__,
     'after_create',  # only do this when the table is created
-    DDL(
-        'INSERT OR IGNORE INTO sqlite_sequence (name, seq) '
-        'VALUES (\'identifier\', %d)'
-        % START_ID
-        ).execute_if(dialect='sqlite'))
-
-
-event.listen(
-    Identifier.__table__,
-    'after_create',  # only do this when the table is created
-    DDL(
+    sa.DDL(
         'ALTER SEQUENCE identifier_id_pk_seq RESTART WITH %d'
         % START_ID
         ).execute_if(dialect=['postgresql', 'postgres']))

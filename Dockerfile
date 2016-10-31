@@ -10,8 +10,9 @@ FROM centos:7
 RUN yum update -y
 RUN yum groupinstall -y 'Development Tools'
 RUN yum install -y epel-release
-RUN yum install  -y nodejs npm magic postgresql-devel python-pip python-devel jsmin
+RUN yum install -y postgresql-devel python-pip python-devel
 
+RUN yum install -y nodejs npm jsmin
 RUN npm install -g less && npm install -g bower
 RUN echo '{ "allow_root": true }' > /root/.bowerrc
 

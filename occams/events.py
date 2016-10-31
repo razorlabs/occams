@@ -2,9 +2,8 @@
 Pyramid-specific events
 """
 
+import sqlalchemy as sa
 from pyramid.events import subscriber, NewResponse, NewRequest
-
-from . import models
 
 
 @subscriber(NewResponse)
@@ -25,11 +24,18 @@ def track_user_on_request(event):
     request = event.request
     dbsession = request.dbsession
 
+    dbsession.info['request'] = request
+    dbsession.info['settings'] = request.registry.settings
+
     if request.authenticated_userid is not None:
-        dbsession.info['blame'] = (
-            dbsession.query(models.User)
-            .filter_by(key=request.authenticated_userid)
-            .one())
+        dbsession.execute(
+            sa.text('SET LOCAL "application.name" = :param'),
+            {'param': 'wsgi'}
+        )
+        dbsession.execute(
+            sa.text('SET LOCAL "application.user" = :param'),
+            {'param': request.authenticated_userid}
+        )
 
     # Store the CSRF token in a cookie since we'll need to sent it back
     # frequently in single-page views.

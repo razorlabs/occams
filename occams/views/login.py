@@ -41,13 +41,6 @@ def login(request):
         if not authenticated:
             request.session.flash(_(u'Invalid credentials'), 'danger')
         else:
-            user = (
-                dbsession.query(models.User)
-                .filter_by(key=form.login.data)
-                .first())
-            if not user:
-                user = models.User(key=form.login.data)
-                dbsession.add(user)
 
             referrer = request.GET.get('referrer')
             if not referrer or request.route_path('accounts.login') in referrer:

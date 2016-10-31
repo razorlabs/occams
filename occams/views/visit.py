@@ -9,7 +9,7 @@ import wtforms
 from wtforms.ext.dateutil.fields import DateField
 from wtforms_components import DateRange
 
-from .. import _, models
+from .. import _, models, log
 from ..utils.forms import wtferrors, ModelField, Form
 from ..renderers import make_form, render_form, apply_data, entity_data, modes
 from . import entry as form_views
@@ -184,7 +184,6 @@ def edit_json(context, request):
     else:
         visit = context
 
-    visit.patient.modify_date = datetime.now()
     visit.visit_date = form.visit_date.data
 
     # Set the entire list and let sqlalchemy prune the orphans
@@ -279,7 +278,6 @@ def delete_json(context, request):
     check_csrf_token(request)
     dbsession = request.dbsession
     list(map(dbsession.delete, context.entities))
-    context.patient.modify_date = datetime.now()
     dbsession.delete(context)
     dbsession.flush()
     request.session.flash(_(

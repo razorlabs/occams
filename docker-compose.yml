@@ -11,9 +11,11 @@ app:
     - "3000:3000"
   links:
     - postgres:postgres
+    - postgres-tests:postgres-tests
     - redis:redis
   volumes:
     - ./occams:/app/occams
+    - ./alembic:/app/alembic
     - ./develop.ini:/app/develop.ini
     - ./bower.json:/app/bower.json
     - ./tests:/app/tests
@@ -33,7 +35,7 @@ celery:
     - app
 
 postgres:
-  image: postgres:9.5
+  build: ./postgres
   restart: always
   environment:
     - POSTGRES_USER=occams
@@ -41,8 +43,16 @@ postgres:
   ports:
     - "5432:5432"
   volumes:
-    - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
     - postgres:/var/lib/postgresql/data/
+
+postgres-tests:
+  build: ./postgres
+  restart: always
+  environment:
+    - POSTGRES_USER=test
+    - POSTGRES_DB=test
+  ports:
+    - "6543:5432"
 
 redis:
   image: redis:latest

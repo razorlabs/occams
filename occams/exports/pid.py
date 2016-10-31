@@ -45,13 +45,13 @@ class PidPlan(ExportPlan):
             row('pid', name, types.STRING, is_required=True, is_system=True),
             row('site', name, types.STRING, is_required=True, is_system=True),
             row('early_id', name, types.STRING, is_system=True),
-            row('create_date', self.name, types.DATE,
+            row('created_at', self.name, types.DATE,
                 is_required=True, is_system=True),
-            row('create_user', self.name, types.STRING,
+            row('created_by', self.name, types.STRING,
                 is_required=True, is_system=True),
-            row('modify_date', self.name, types.DATE,
+            row('modified_at', self.name, types.DATE,
                 is_required=True, is_system=True),
-            row('modify_user', self.name, types.STRING, is_required=True,
+            row('modified_by', self.name, types.STRING, is_required=True,
                 is_system=True)
         ]
 
@@ -103,18 +103,14 @@ class PidPlan(ExportPlan):
                 .as_scalar()
                 .label(reftype.name))
 
-        CreateUser = aliased(models.User)
-        ModifyUser = aliased(models.User)
-
         query = (
             query
-            .join(CreateUser, models.Patient.create_user)
-            .join(ModifyUser, models.Patient.modify_user)
             .add_columns(
-                models.Patient.create_date,
-                CreateUser.key.label('create_user'),
-                models.Patient.modify_date,
-                ModifyUser.key.label('modify_user'))
+                models.Patient.created_at,
+                models.Patient.created_by,
+                models.Patient.modified_at,
+                models.Patient.modified_by
+            )
             .order_by(models.Patient.id))
 
         return query

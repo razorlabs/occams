@@ -43,9 +43,9 @@
                 <a href="${request.route_path('studies.patient', patient=patient.pid)}">${patient.pid}</a>
                 &bull;
                 <small class="text-muted">
-                  ${humanize.naturaltime(patient.modify_date)}
+                  ${humanize.naturaltime(patient.modified_at)}
                   <span i18n:translate="">by</span>
-                  ${patient.modify_user.key}
+                  ${patient.modified_by}
                 </small>
               </li>
             </tal:patients>

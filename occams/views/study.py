@@ -65,7 +65,7 @@ def list_(request):
         modified_query = (
             dbsession.query(models.Patient)
             .filter(models.Patient.site.has(models.Site.id.in_(site_ids)))
-            .order_by(models.Patient.modify_date.desc())
+            .order_by(models.Patient.modified_at.desc())
             .limit(10))
 
         modified_count = modified_query.count()

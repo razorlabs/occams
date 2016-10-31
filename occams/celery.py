@@ -23,7 +23,6 @@ import sqlalchemy as sa
 from sqlalchemy import orm
 
 from . import models
-from .models.events import register
 
 
 app = Celery(__name__)
@@ -42,7 +41,6 @@ log = get_task_logger(__name__)
 #       celery tasks...
 #
 Session = orm.scoped_session(orm.sessionmaker())
-register(Session)
 
 
 def includeme(config):
@@ -152,17 +150,6 @@ def on_celeryd_init(**kw):
 
     app.userid = settings['celery.blame']
 
-    # Attempt to add the user via raw engine connection, using the scoped
-    # session leaves it in a dangerous non-thread-local state as we're
-    # still in the parent setup process
-    throw_away_engine = sa.engine_from_config(settings)
-    with throw_away_engine.begin() as connection:
-        try:
-            connection.execute(models.User.__table__.insert(),  key=app.userid)
-        except sa.exc.IntegrityError:
-            pass
-    throw_away_engine.dispose()
-
     # Configure the session with an untainted engine
     engine = sa.engine_from_config(settings)
     Session.configure(bind=engine)
@@ -176,10 +163,14 @@ def with_transaction(func):
     """
     def decorated(*args, **kw):
         userid = app.userid
-        Session.info['blame'] = (
-            Session.query(models.User)
-            .filter_by(key=userid)
-            .one())
+        Session.execute(
+            sa.text('SET LOCAL "application.name" = :param'),
+            {'param': 'celery'}
+        )
+        Session.execute(
+            sa.text('SET LOCAL "application.user" = :param'),
+            {'param': userid}
+        )
         Session.info['settings'] = app.settings
         try:
             result = func(*args, **kw)

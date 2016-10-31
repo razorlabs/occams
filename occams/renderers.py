@@ -7,17 +7,20 @@ and associated plugins must be enabled.
 
 from __future__ import division
 import collections
+from decimal import Decimal
 from datetime import date, datetime
 import os
 from itertools import groupby
-import uuid
 import cgi
 from decimal import ROUND_UP
+import tempfile
 
 import magic
 from pyramid.renderers import render
+from dateutil.parser import parse as dateutil_parse
 import six
 import sqlalchemy as sa
+from sqlalchemy.orm.attributes import flag_modified
 import wtforms
 import wtforms.fields.html5
 import wtforms.widgets.html5
@@ -493,7 +496,22 @@ def entity_data(entity):
         else:
             parent = data
 
-        parent[attribute.name] = entity[attribute.name]
+        if entity.data:
+            value = entity.data.get(attribute.name)
+        else:
+            value = None
+
+        if value is not None:
+            if attribute.type == 'number':
+                value = Decimal(value)
+            elif attribute.type == 'date':
+                value = dateutil_parse(value).date()
+            elif attribute.type == 'datetime':
+                value = dateutil_parse(value)
+            elif attribute.type == 'blob':
+                value = entity.attachments.get(value)
+
+        parent[attribute.name] = value
 
     return data
 
@@ -540,11 +558,16 @@ def apply_data(session, entity, data, upload_path):
 
     clear_data = entity.not_done or next_state == states.PENDING_ENTRY
 
+    if clear_data:
+        entity.data = None
+        return entity
+
+    if entity.data is None:
+        entity.data = {}
+
     for attribute in entity.schema.iterleafs():
 
-        if clear_data:
-            entity[attribute.name] = None
-            continue
+        value = None
 
         # Find the appropriate attribute to update
         if attribute.parent_attribute:
@@ -563,56 +586,66 @@ def apply_data(session, entity, data, upload_path):
             # instance of FieldStorage
 
             if isinstance(data[attribute.name], cgi.FieldStorage):
+
+                previous_attachment_id = entity.data.get(attribute.name)
+
+                if previous_attachment_id:
+                    try:
+                        del entity.attachments[previous_attachment_id]
+                    except KeyError:
+                        log.warn(
+                            'Entity attachement (%d) is no longer available, '
+                            'it may have been removed without updating the '
+                            'entity JSON document' % previous_attachment_id
+                        )
+                    else:
+                        session.flush()
+
                 original_name = os.path.basename(data[attribute.name].filename)
+
                 input_file = data[attribute.name].file
-
-                generated_path = os.path.join(*str(uuid.uuid4()).split('-'))
-                dest_path = os.path.join(upload_path, generated_path)
-
-                # create a directory excluding the filename
-                os.makedirs(os.path.dirname(dest_path))
-
-                # Write to a temporary file to prevent using incomplete files
-                temp_dest_path = dest_path + '~'
-
-                output_file = open(temp_dest_path, 'wb')
-
+                output_file = tempfile.NamedTemporaryFile()
                 input_file.seek(0)
-                while True:
-                    data = input_file.read(2 << 16)
-                    if not data:
-                        break
-                    output_file.write(data)
 
-                # Make sure the data is commited to the file system
-                # before closing
+                while True:
+                    chunk = input_file.read(2 << 16)
+                    if not chunk:
+                        break
+                    output_file.write(chunk)
+
+                # Ensure the data is commited to the file system before closing
                 output_file.flush()
                 os.fsync(output_file.fileno())
+                output_file.seek(0)
 
-                output_file.close()
+                mime_type = magic.from_file(output_file.name, mime=True)
 
-                # Rename successfully uploaded file
-                os.rename(temp_dest_path, dest_path)
+                attachment = models.EntityAttachment(
+                    entity=entity,
+                    file_name=original_name,
+                    mime_type=mime_type,
+                    blob=models.EntityAttachmentBlob(
+                        content=output_file.read(),
+                    )
+                )
 
-                # get mime type using filemagic
-                # this depends on os program libmagic
-                # look for alternate method in the future
-                # to reduce dependencies
-                with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
-                    mime_type = m.id_filename(dest_path)
+                session.add(attachment)
+                session.flush()
 
-                value = models.BlobInfo(original_name, dest_path, mime_type)
+                value = attachment.id
 
-            else:
-
-                value = None
-
-            if isinstance(entity[attribute.name], models.BlobInfo):
-                os.unlink(entity[attribute.name].path)
+            elif isinstance(data[attribute.name], models.EntityAttachment):
+                value = data[attribute.name].id
 
         else:
             value = parent[attribute.name]
 
-        entity[attribute.name] = value
+        if value is not None \
+                and attribute.type in ('number', 'date', 'datetime'):
+            value = str(value)
+
+        entity.data[attribute.name] = value
+
+    flag_modified(entity, 'data')
 
     return entity

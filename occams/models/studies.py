@@ -8,14 +8,13 @@ import sqlalchemy as sa
 from sqlalchemy import orm
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.dialects.postgresql import JSONB
 
 from .groups import groups
 from .meta import Base
-from .auditing import Auditable
 from .metadata import Referenceable, Describeable, Modifiable, User
 from .schema import Schema
 from .storage import Entity, State, HasEntities
-from ..utils.sql import JSON
 
 
 class StudyFactory(object):
@@ -87,7 +86,7 @@ class Study(Base,
             Referenceable,
             Describeable,
             Modifiable,
-            Auditable):
+            ):
 
     __tablename__ = 'study'
 
@@ -231,7 +230,7 @@ class Cycle(Base,
             Referenceable,
             Describeable,
             Modifiable,
-            Auditable):
+            ):
     """
     Study schedule represented as week cycles
     """
@@ -289,7 +288,7 @@ class Arm(Base,
           Referenceable,
           Describeable,
           Modifiable,
-          Auditable):
+          ):
     """
     A group of study strata
     """
@@ -353,7 +352,7 @@ class ExternalService(Base,
                       Referenceable,
                       Describeable,
                       Modifiable,
-                      Auditable):
+                      ):
     """
     A way to dynamically link participant to external services
     """
@@ -464,7 +463,7 @@ class Site(Base,
            Referenceable,
            Describeable,
            Modifiable,
-           Auditable):
+           ):
     """
     A facility within an organization
     """
@@ -514,7 +513,7 @@ class Patient(Base,
               Referenceable,
               Modifiable,
               HasEntities,
-              Auditable):
+              ):
 
     __tablename__ = 'patient'
 
@@ -644,7 +643,7 @@ class ReferenceType(Base,
 class PatientReference(Base,
                        Referenceable,
                        Modifiable,
-                       Auditable):
+                       ):
     """
     References to a studies subject from other sources
     """
@@ -738,7 +737,7 @@ class Enrollment(Base,
                  Referenceable,
                  Modifiable,
                  HasEntities,
-                 Auditable):
+                 ):
     """
     A patient's participation in a study.
     """
@@ -841,7 +840,7 @@ class Stratum(Base,
               Referenceable,
               Modifiable,
               HasEntities,
-              Auditable):
+              ):
     """
     A possible study enrollment assignement.
     Useful for enrolling randomized patients.
@@ -994,7 +993,7 @@ class Visit(Base,
             Referenceable,
             Modifiable,
             HasEntities,
-            Auditable):
+            ):
 
     __tablename__ = 'visit'
 
@@ -1157,7 +1156,7 @@ class ExportFactory(object):
 class Export(Base,
              Referenceable,
              Modifiable,
-             Auditable):
+             ):
     """
     Metadata about an export, such as file contents and experation date.
     """
@@ -1201,7 +1200,7 @@ class Export(Base,
         default='pending')
 
     contents = sa.Column(
-        JSON,
+        JSONB,
         nullable=False,
         doc="""
             A snapshot of the contents of this export with some metadata.

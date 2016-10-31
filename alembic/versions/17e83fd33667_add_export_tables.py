@@ -16,7 +16,7 @@ branch_labels = None
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import sql
-from sqlalchemy.dialects.postgres import JSON
+from sqlalchemy.dialects.postgresql import JSON
 
 
 def upgrade():

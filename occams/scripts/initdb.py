@@ -14,6 +14,7 @@ import sys
 
 from alembic.config import Config
 from alembic import command
+import sqlalchemy as sa
 from sqlalchemy import create_engine
 from pyramid.paster import setup_logging
 
@@ -39,7 +40,14 @@ def main(argv=sys.argv):
     assert blame, 'Need to blame someone!'
 
     with engine.begin() as connection:
-        connection.info['blame'] = blame
+        connection.execute(
+            sa.text('SET LOCAL "application.name" = :param'), param='occams'
+        )
+        connection.execute(
+            sa.text('SET LOCAL "application.user" = :param'), param=blame
+        )
+
         Base.metadata.create_all(connection)
+
         alembic_cfg.attributes['connection'] = connection
         command.stamp(alembic_cfg, 'heads')
