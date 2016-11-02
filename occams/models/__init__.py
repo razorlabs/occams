@@ -34,7 +34,9 @@ from .studies import (  # noqa
     Visit,
     ExportFactory,
     Export,
-    EntryFactory
+    EntryFactory,
+    Survey,
+    SurveyFactory
 )
 
 from .forms import (  # noqa

@@ -1258,38 +1258,29 @@ class Export(Base,
                 'ix_%s_owner_user_id' % cls.__tablename__,
                 cls.owner_user_id))
 
-class Survey(StudiesModel, datastore.Referenceable):
+
+class Survey(Base, Referenceable, Modifiable):
     """
-        A survey object
+    A survey object
     """
 
     __tablename__ = 'survey'
 
-
-    entity_id = sa.Column(sa.ForeignKey(datastore.Entity.id,
-        ondelete='CASCADE'), nullable=False)
+    entity_id = sa.Column(
+        sa.ForeignKey(Entity.id, ondelete='CASCADE'),
+        nullable=False
+    )
 
     access_code = sa.Column(sa.String, nullable=False)
-    url = sa.Column(sa.String, nullable=False)
-    expire_date = sa.Column(sa.DateTime, nullable=True)
-    status = sa.Column(sa.String, nullable=False)
-    complete_date = sa.Column(sa.DateTime, nullable=True)
-    create_date = sa.Column(sa.DateTime,
-        server_default=sa.text('CURRENT_TIMESTAMP'))
-    create_user_id = sa.Column(sa.ForeignKey(datastore.User.id))
 
-    #@declared_attr
-    #def __table_args__(cls):
-    #    return (
-        #    sa.ForeignKeyConstraint(
-        #    columns=[cls.entity_id],
-        #    refcolumns=[datastore.Entity.id],
-        #    name=u'fk_{0}_entity_id'.format(cls.__tablename__),
-        #    ondelete='CASCASE'
-        #    ),
-    #        sa.UniqueConstraint(
-    #        'url', name='uq_{0}_url'.format(cls.__tablename__))
-    #        ,)
+    url = sa.Column(sa.String, nullable=False, unique=True)
+
+    expire_date = sa.Column(sa.DateTime, nullable=True)
+
+    status = sa.Column(sa.String, nullable=False)
+
+    complete_date = sa.Column(sa.DateTime(timezone=True), nullable=True)
+
 
 class SurveyFactory(object):
     __acl__ = [
