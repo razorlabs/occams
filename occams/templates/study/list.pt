@@ -24,7 +24,8 @@
                 <a href="${request.route_path('studies.patient', patient=patient.pid)}">${patient.pid}</a>
                 &bull;
                 <small class="text-muted">
-                  ${humanize.naturaltime(patient['view_date'])}
+                  <!--! humanize doesn't support timezones, need to use naive time for now -->
+                  ${humanize.naturaltime(patient['view_date'].replace(tzinfo=None))}
                 </small>
               </li>
             </tal:patients>
@@ -43,7 +44,8 @@
                 <a href="${request.route_path('studies.patient', patient=patient.pid)}">${patient.pid}</a>
                 &bull;
                 <small class="text-muted">
-                  ${humanize.naturaltime(patient.modified_at)}
+                  <!--! humanize doesn't support timezones, need to use naive time for now -->
+                  ${humanize.naturaltime(patient.modified_at.replace(tzinfo=None))}
                   <span i18n:translate="">by</span>
                   ${patient.modified_by}
                 </small>
