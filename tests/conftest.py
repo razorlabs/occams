@@ -66,34 +66,26 @@ def create_tables(request):
 
     :returns: configured database session
     """
-    import os
     from sqlalchemy import create_engine
-    from occams_datastore import models as datastore
-    from occams import models
+    from occams.models.meta import Base
 
     db_url = request.config.getoption('--db')
     reuse = request.config.getoption('--reuse')
 
     engine = create_engine(db_url)
-    url = engine.url
 
     if not reuse:
         with engine.connect() as connection:
             connection.info['blame'] = 'test_installer'
             # This is very similar to the init_db script: create tables
             # and pre-populate with expected data
-            datastore.DataStoreModel.metadata.create_all(connection)
-            models.StudiesModel.metadata.create_all(connection)
+            Base.metadata.create_all(connection)
             # Don't include state data since we'll be constantly truncating
             connection.execute('DELETE FROM state')
 
     def drop_tables():
-        if url.drivername == 'sqlite':
-            if url.database not in ('', ':memory:'):
-                os.unlink(url.database)
-        elif not reuse:
-            models.StudiesModel.metadata.drop_all(engine)
-            datastore.DataStoreModel.metadata.drop_all(engine)
+        if not reuse:
+            Base.metadata.drop_all(engine)
 
     request.addfinalizer(drop_tables)
 
@@ -112,7 +104,7 @@ def config(request):
     db_url = request.config.getoption('--db')
 
     test_config = testing.setUp(settings={
-        'occams.db.url': db_url
+        'sqlalchemy.url': db_url
     })
 
     # Load mimimum set of plugins
@@ -134,17 +126,17 @@ def dbsession(config):
 
     :returns: An instantiated sqalchemy database session
     """
-    from occams_datastore import models as datastore
-    import occams_datastore.models.events
+    from occams import models
+    import occams.models.events
     import zope.sqlalchemy
 
     dbsession = config.registry['dbsession_factory']()
 
-    occams_datastore.models.events.register(dbsession)
+    occams.models.events.register(dbsession)
     zope.sqlalchemy.register(dbsession)
 
     # Pre-configure with a blame user
-    blame = datastore.User(key=USERID)
+    blame = models.User(key=USERID)
     dbsession.add(blame)
     dbsession.flush()
     dbsession.info['blame'] = blame
@@ -154,11 +146,10 @@ def dbsession(config):
 
     # Hardcoded workflow
     dbsession.add_all([
-        datastore.State(name=u'pending-entry', title=u'Pending Entry'),
-        datastore.State(name=u'pending-review', title=u'Pending Review'),
-        datastore.State(name=u'pending-correction',
-                        title=u'Pending Correction'),
-        datastore.State(name=u'complete', title=u'Complete')
+        models.State(name=u'pending-entry', title=u'Pending Entry'),
+        models.State(name=u'pending-review', title=u'Pending Review'),
+        models.State(name=u'pending-correction', title=u'Pending Correction'),
+        models.State(name=u'complete', title=u'Complete')
     ])
 
     return dbsession
@@ -228,13 +219,10 @@ def wsgi(request):
 
     :returns: a WSGI application
     """
-    import os
     import tempfile
     import shutil
-    import sqlalchemy as sa
     import six
     from occams import main
-    from occams_roster import models as roster
 
     # The pyramid_who plugin requires a who file, so let's create a
     # barebones files for it...
@@ -253,12 +241,6 @@ def wsgi(request):
 
     tmp_dir = tempfile.mkdtemp()
 
-    roster_path = os.path.join(tmp_dir, 'roster.db')
-    roster_url = 'sqlite:///{}'.format(roster_path)
-
-    roster_engine = sa.create_engine(roster_url)
-    roster.Base.metadata.create_all(roster_engine)
-
     wsgi = main({}, **{
         'redis.url': REDIS_URL,
         'redis.sessions.secret': 'sekrit',
@@ -272,9 +254,9 @@ def wsgi(request):
 
         'webassets.debug': True,
 
-        'occams.apps': ['occams', 'occams_roster'],
+        'occams.apps': ['occams', 'occams'],
 
-        'occams.db.url': db_url,
+        'sqlalchemy.url': db_url,
         'occams.groups': [],
 
         'celery.broker.url': REDIS_URL,
@@ -288,16 +270,13 @@ def wsgi(request):
             'occams.exports.visit.VisitPlan',
             'occams.exports.schema.SchemaPlan.list_all',
         ],
-        'studies.pid.package': 'occams_roster',
+        'studies.pid.package': 'occams',
         'studies.blob.dir': '/tmp',
-
-        'roster.db.url': roster_url,
     })
 
     who_ini.close()
 
     def cleanup():
-        os.unlink(roster_path)
         shutil.rmtree(tmp_dir)
 
     request.addfinalizer(cleanup)
@@ -319,21 +298,21 @@ def app(request, wsgi, dbsession):
     import transaction
     from webtest import TestApp
     from zope.sqlalchemy import mark_changed
-    from occams_datastore import models as datastore
+    from occams import models as models
 
     # Save all changes up tho this point (dbsession does some configuration)
     with transaction.manager:
-        blame = datastore.User(key='workflow@localhost')
+        blame = models.User(key='workflow@localhost')
         dbsession.add(blame)
         dbsession.flush()
         dbsession.info['blame'] = blame
 
         dbsession.add_all([
-            datastore.State(name=u'pending-entry', title=u'Pending Entry'),
-            datastore.State(name=u'pending-review', title=u'Pending Review'),
-            datastore.State(name=u'pending-correction',
-                            title=u'Pending Correction'),
-            datastore.State(name=u'complete', title=u'Complete')
+            models.State(name=u'pending-entry', title=u'Pending Entry'),
+            models.State(name=u'pending-review', title=u'Pending Review'),
+            models.State(
+                name=u'pending-correction', title=u'Pending Correction'),
+            models.State(name=u'complete', title=u'Complete')
         ])
 
     app = TestApp(wsgi)
@@ -345,6 +324,7 @@ def app(request, wsgi, dbsession):
         # http://stackoverflow.com/a/11423886/148781
         # We also have to do this as a raw query becuase SA does
         # not have a way to invoke server-side cascade
+        dbsession.execute('DELETE FROM "rostersite" CASCADE')
         dbsession.execute('DELETE FROM "study" CASCADE')
         dbsession.execute('DELETE FROM "patient" CASCADE')
         dbsession.execute('DELETE FROM "site" CASCADE')
@@ -369,7 +349,7 @@ def celery(request):
     from redis import StrictRedis
     from sqlalchemy import create_engine
     from occams.celery import Session
-    from occams_datastore import models as datastore
+    from occams import models as models
     from occams import tasks
 
     settings = {
@@ -384,7 +364,7 @@ def celery(request):
     db_url = request.config.getoption('--db')
     engine = create_engine(db_url)
     Session.configure(bind=engine, info={'settings': settings})
-    Session.add(datastore.User(key=settings['celery.blame']))
+    Session.add(models.User(key=settings['celery.blame']))
     Session.flush()
 
     commitmock = mock.patch('occams.tasks.Session.commit')

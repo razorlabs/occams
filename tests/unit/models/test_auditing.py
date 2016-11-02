@@ -15,7 +15,7 @@ from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, deferred, relationship, scoped_session  # NOQA
 
-from occams_datastore.models.auditing import Auditable, createRevision
+from occams.models.auditing import Auditable, createRevision
 
 
 def auditing_session(session):

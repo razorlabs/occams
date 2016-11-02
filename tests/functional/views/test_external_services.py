@@ -1,5 +1,5 @@
 import pytest
-from occams.testing import USERID, make_environ
+from tests.testing import USERID, make_environ
 
 
 class TestManageExternalServices:

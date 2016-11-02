@@ -10,7 +10,7 @@ Do not import this module directly, we've setup a fixture for this.
 import factory
 from factory.alchemy import SQLAlchemyModelFactory
 
-from occams_datastore import models as datastore
+from occams import models as datastore
 from occams import models as studies
 
 

@@ -73,3 +73,7 @@ def includeme(config):
     config.add_route('studies.cycle',                       '/studies/{study}/cycles/{cycle}',              factory=models.StudyFactory, traverse='/{study}/cycles/{cycle}')
     config.add_route('studies.external_services',           '/studies/{study}/external-services',           factory=models.StudyFactory, traverse='/{study}/external-services')
     config.add_route('studies.external_service',            '/studies/{study}/external-services/{service}', factory=models.StudyFactory, traverse='/{study}/external-services/{service}')
+
+    #survey routes
+    config.add_route('studies.survey',                      '/survey/{survey}',                             factory=models.SurveyFactory, traverse='/{survey}')
+

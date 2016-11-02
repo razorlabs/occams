@@ -1,5 +1,5 @@
 import pytest
-from occams.testing import USERID, make_environ, get_csrf_token
+from tests.testing import USERID, make_environ, get_csrf_token
 
 
 class TestPermissionsCyclesAdd:
@@ -10,32 +10,31 @@ class TestPermissionsCyclesAdd:
     def populate(self, app, dbsession):
 
         import transaction
-        from occams import models as studies
-        from occams_datastore import models as datastore
+        from occams import models
         from datetime import date
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            user = datastore.User(key=USERID)
+            user = models.User(key=USERID)
             dbsession.info['blame'] = user
             dbsession.add(user)
             dbsession.flush()
 
-            site = studies.Site(
+            site = models.Site(
                 name=u'UCSD',
                 title=u'UCSD',
                 description=u'UCSD Campus',
                 create_date=date.today())
 
-            patient = studies.Patient(
+            patient = models.Patient(
                 initials=u'ian',
                 nurse=u'imanurse@ucsd.edu',
                 site=site,
                 pid=u'123'
             )
 
-            study = studies.Study(
+            study = models.Study(
                 name=u'test_study',
                 code=u'test_code',
                 consent_date=date(2014, 12, 23),
@@ -105,32 +104,31 @@ class TestPermissionsCyclesDelete:
     def populate(self, app, dbsession):
 
         import transaction
-        from occams import models as studies
-        from occams_datastore import models as datastore
+        from occams import models
         from datetime import date
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            user = datastore.User(key=USERID)
+            user = models.User(key=USERID)
             dbsession.info['blame'] = user
             dbsession.add(user)
             dbsession.flush()
 
-            site = studies.Site(
+            site = models.Site(
                 name=u'UCSD',
                 title=u'UCSD',
                 description=u'UCSD Campus',
                 create_date=date.today())
 
-            patient = studies.Patient(
+            patient = models.Patient(
                 initials=u'ian',
                 nurse=u'imanurse@ucsd.edu',
                 site=site,
                 pid=u'123'
             )
 
-            study = studies.Study(
+            study = models.Study(
                 name=u'test_study',
                 code=u'test_code',
                 consent_date=date(2014, 12, 23),
@@ -139,7 +137,7 @@ class TestPermissionsCyclesDelete:
                 short_title=u'test_short',
             )
 
-            cycle = studies.Cycle(
+            cycle = models.Cycle(
                 name=u'TestDelete',
                 title=u'TestDelete',
                 week=39,
@@ -200,32 +198,31 @@ class TestPermissionsCyclesEdit:
     def populate(self, app, dbsession):
 
         import transaction
-        from occams import models as studies
-        from occams_datastore import models as datastore
+        from occams import models
         from datetime import date
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            user = datastore.User(key=USERID)
+            user = models.User(key=USERID)
             dbsession.info['blame'] = user
             dbsession.add(user)
             dbsession.flush()
 
-            site = studies.Site(
+            site = models.Site(
                 name=u'UCSD',
                 title=u'UCSD',
                 description=u'UCSD Campus',
                 create_date=date.today())
 
-            patient = studies.Patient(
+            patient = models.Patient(
                 initials=u'ian',
                 nurse=u'imanurse@ucsd.edu',
                 site=site,
                 pid=u'123'
             )
 
-            study = studies.Study(
+            study = models.Study(
                 name=u'test_study',
                 code=u'test_code',
                 consent_date=date(2014, 12, 23),
@@ -234,7 +231,7 @@ class TestPermissionsCyclesEdit:
                 short_title=u'test_short',
             )
 
-            cycle = studies.Cycle(
+            cycle = models.Cycle(
                 name=u'TestDelete',
                 title=u'TestDelete',
                 week=39,
@@ -305,32 +302,31 @@ class TestPermissionsCyclesView:
     def populate(self, app, dbsession):
 
         import transaction
-        from occams import models as studies
-        from occams_datastore import models as datastore
+        from occams import models
         from datetime import date
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            user = datastore.User(key=USERID)
+            user = models.User(key=USERID)
             dbsession.info['blame'] = user
             dbsession.add(user)
             dbsession.flush()
 
-            site = studies.Site(
+            site = models.Site(
                 name=u'UCSD',
                 title=u'UCSD',
                 description=u'UCSD Campus',
                 create_date=date.today())
 
-            patient = studies.Patient(
+            patient = models.Patient(
                 initials=u'ian',
                 nurse=u'imanurse@ucsd.edu',
                 site=site,
                 pid=u'123'
             )
 
-            study = studies.Study(
+            study = models.Study(
                 name=u'test_study',
                 code=u'test_code',
                 consent_date=date(2014, 12, 23),
@@ -339,7 +335,7 @@ class TestPermissionsCyclesView:
                 short_title=u'test_short',
             )
 
-            cycle = studies.Cycle(
+            cycle = models.Cycle(
                 name=u'TestView',
                 title=u'TestView',
                 week=39,

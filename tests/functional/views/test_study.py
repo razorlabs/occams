@@ -1,20 +1,20 @@
 import pytest
-from occams.testing import USERID, make_environ, get_csrf_token
+from tests.testing import USERID, make_environ, get_csrf_token
 
 
 class TestPermissionsStudyList:
 
-    url = '/studies/'
+    url = '/'
 
     @pytest.fixture(autouse=True)
     def populate(self, app, dbsession):
         import transaction
-        from occams_datastore import models as datastore
+        from occams import models
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            dbsession.add(datastore.User(key=USERID))
+            dbsession.add(models.User(key=USERID))
 
     @pytest.mark.parametrize('group', [
         'administrator', 'manager', 'enterer', 'reviewer',
@@ -30,17 +30,17 @@ class TestPermissionsStudyList:
 
 class TestPermissionsStudyAdd:
 
-    url = '/studies/'
+    url = '/'
 
     @pytest.fixture(autouse=True)
     def populate(self, app, dbsession):
         import transaction
-        from occams_datastore import models as datastore
+        from occams import models
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            user = datastore.User(key=USERID)
+            user = models.User(key=USERID)
             dbsession.info['blame'] = user
             dbsession.add(user)
             dbsession.flush()
@@ -89,18 +89,17 @@ class TestPermissionsStudyView:
     @pytest.fixture(autouse=True)
     def populate(self, app, dbsession):
         import transaction
-        from occams import models as studies
-        from occams_datastore import models as datastore
+        from occams import models
         from datetime import date
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            user = datastore.User(key=USERID)
+            user = models.User(key=USERID)
             dbsession.info['blame'] = user
             dbsession.add(user)
             dbsession.flush()
-            dbsession.add(studies.Study(
+            dbsession.add(models.Study(
                 name=u'test',
                 title=u'test',
                 short_title=u'test',
@@ -128,19 +127,18 @@ class TestPermissionsStudyEdit:
     @pytest.fixture(autouse=True)
     def populate(self, app, dbsession):
         import transaction
-        from occams import models as studies
-        from occams_datastore import models as datastore
+        from occams import models
         from datetime import date
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            user = datastore.User(key=USERID)
+            user = models.User(key=USERID)
             dbsession.info['blame'] = user
             dbsession.add(user)
             dbsession.flush()
             dbsession.add(
-                studies.Study(
+                models.Study(
                     name=u'test',
                     title=u'test',
                     short_title=u'test',
@@ -189,19 +187,18 @@ class TestPermissionsStudyDelete:
     @pytest.fixture(autouse=True)
     def populate(self, app, dbsession):
         import transaction
-        from occams import models as studies
-        from occams_datastore import models as datastore
+        from occams import models
         from datetime import date
 
         # Any view-dependent data goes here
         # Webtests will use a different scope for its transaction
         with transaction.manager:
-            user = datastore.User(key=USERID)
+            user = models.User(key=USERID)
             dbsession.info['blame'] = user
             dbsession.add(user)
             dbsession.flush()
             dbsession.add(
-                studies.Study(
+                models.Study(
                     name=u'test',
                     title=u'test',
                     short_title=u'test',
