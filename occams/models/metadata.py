@@ -8,6 +8,49 @@ from sqlalchemy.ext.declarative import declared_attr
 from .meta import Base
 
 
+@sa.event.listens_for(Base.metadata, 'before_create')
+def create_touch_procedures(target, connection, **kw):
+    """
+    Creates necessary stored procedures for updating record timestamps
+    """
+
+    connection.execute(r"""
+        CREATE OR REPLACE FUNCTION touch() RETURNS TRIGGER AS $$
+        DECLARE
+            _user text;
+            _timestamp timestamp;
+        BEGIN
+            _user := (SELECT current_setting('application.user'));
+            _timestamp := timeofday();
+
+            IF tg_op = 'INSERT' THEN
+                NEW.created_by := lower(_user);
+                NEW.created_at := _timestamp;
+            END IF;
+
+            NEW.modified_by := lower(_user);
+            NEW.modified_at := _timestamp;
+
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+    """)
+
+    connection.execute(r"""
+        CREATE OR REPLACE FUNCTION touch_table(target_table regclass)
+            RETURNS void AS $$
+        BEGIN
+            EXECUTE '
+                DROP TRIGGER IF EXISTS touch_trigger ON ' || target_table || ';
+                CREATE TRIGGER touch_trigger
+                BEFORE INSERT OR UPDATE
+                ON ' || target_table || '
+                FOR EACH ROW EXECUTE PROCEDURE touch()';
+        END;
+        $$ LANGUAGE plpgsql;
+    """)
+
+
 class Referenceable(object):
     """
     Adds primary key id columns to tables.
