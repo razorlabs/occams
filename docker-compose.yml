@@ -35,7 +35,7 @@ celery:
     - app
 
 postgres:
-  build: ./postgres
+  build: https://github.com/razorlabs/pg-json-audit-trigger.git
   restart: always
   environment:
     - POSTGRES_USER=occams
@@ -46,7 +46,7 @@ postgres:
     - postgres:/var/lib/postgresql/data/
 
 postgres-tests:
-  build: ./postgres
+  build: https://github.com/razorlabs/pg-json-audit-trigger.git
   restart: always
   environment:
     - POSTGRES_USER=test
