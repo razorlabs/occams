@@ -14,16 +14,16 @@
 **O**\ pen Source **C**\ linical **C**\ ontent **A**\ nalysis and **M**\ anagement **S**\ ystem
 
 
-Goals
------
+Features
+--------
 
-* Form versioning
+* Configurable forms with version tagging
+* Study visit matrix configuration
 * Direct data entry instead of using paper forms
-* Data auditing
-* Singular data points with multiple references
+* Data export tools
+* Immutable data auditing
 * Data workflow captured by the system design, but flexible enough to work for multiple use-cases
 * Secure, role-based data access control
-* A Relational Database that could describe how data are related through structure instead of convention
 
 
 System Requirements
@@ -34,110 +34,139 @@ System Requirements
     - bower
     - lessc (must be installed globally, i.e. with "-g" option)
 * redis
-* PostgreSQL 9.3+
+* PostgreSQL 9.6+
 
 
-Getting Started
----------------
+Development
+-----------
 
-These instructions are intended for contributors only.
+This application uses Docker_ to setup a *development environment* with dummy
+user accounts. It is recommended you familiarize yourself with some basic
+knowledge of how it works.
 
-Make sure you have the required node packages installed::
+.. _Docker: https://www.docker.com/
 
-  $ npm install -g bower
-  $ npm install -g less
+VirtualBox
+++++++++++
 
-Create a virtual environment for your work::
+If you are using macOS or Windows, you must install Virtualbox:
 
-  $ virtualenv MYPROJECT
-  $ source MYPROJECT/bin/activate
+https://www.virtualbox.org/wiki/Downloads
 
-Next, create the necesary directories::
-
-  $ cd MYPROJECT
-  $ mkdir -p  etc  var/exports  var/blobs  src
-
-You'll need to git checkout the web application. If you are
-using your own forks, change ``younglabs`` to yours. The reason we
-checkout each project individually is because pip will replace all
-git changes/history the next time your run pip install on a git
-repo, which can lead you to lose a lot of work and sanity::
-
-  $ cd src
-  $ git clone git@github.com:YOURID/occams
-
-Now that your projects are checked out, copy and update the ``requirements.txt``
-found in the ``occams`` project directory.::
-
-  $ cd $VIRTUAL_ENV
-  $ cp src/occams/requirements.txt .
-  $ vim requirements.txt
-  $ pip install -U -r requirements.txt
-
-Once everything is installed you'll need to configure the application with
-your desired development environment settings::
-
-  $ cp src/occams/sample.ini etc/development.ini
-  $ vim etc/development.ini
-
-Install the appropriate database tables::
-
-  $ createdb -U DBADMIN -O DBUSER DBNAME
-  $ occams_initdb etc/development.ini
+This is required to install boot2docker on containers.
 
 
-Start the web service::
-
-  $ gunicorn --reload --paste etc/development.ini
-
-
-If you applications are using asynchronous tasks, you'll need to start the
-celery worker::
-
-  $ celery worker --autoreload --app occams --loglevel INFO --without-gossip --ini etc/development.ini
-
-
-Creating your own app
----------------------
-
-**TODO**
-
-Database Migrations
+Machine and Compose
 +++++++++++++++++++
 
-If your app depends on OCCAMS's database structure, it is advised you use `alembic branchpoints`__
-with a dedicated label for your project.
+You will neeed to install Docker Compose_ and Machine_ in order so setup
+your environment. To do so, follow the instructions the following instructions
+based on your host environment:
 
-.. _alembic: https://alembic.readthedocs.org/en/latest/branches.html#working-with-multiple-bases
+- macOS: https://docs.docker.com/docker-for-mac/
+- Windows: https://docs.docker.com/docker-for-windows/
+- Linux:  https://docs.docker.com/engine/installation/linux/
 
-__ alembic_
-
-Use ``alembic history`` to inspect the current history of OCCAMS application database structures.
-Ideally, your project should follow it's only independent history,
-were you might depend on certain dependant database structure changes. If this is the case, please
-refer to the following scenarios:
-
-New Projects
-''''''''''''
-
-If your project **begins as an independent** database structure::
-
-  $ alembic -c /path/to/ini revision -m "MESSAGE" --head=base --branch-label=MYAPP --version-path=/path/to/app/versions
+.. _Compose: https://docs.docker.com/compose/overview/
+.. _Machine: https://docs.docker.com/machine/overview/
 
 
-If your project **begins depending** on a specific database structure::
+Installation
+++++++++++++
 
-  $ alembic -c /path/to/ini revision -m "MESSAGE" --head=REVISION --splice --branch-label=MYAPP --version-path=/path/to/app/versions
+#. Provision a new Docker machine called "occams-develop" by running the
+   following command::
 
-Existing Projects
-'''''''''''''''''
+      > docker-machine create -d virtualbox occams-develop
 
-If your project's revision **continues** the history::
+#. Point Docker to the development machine::
 
-  $ alembic -c /path/to/ini revision -m "MESSAGE" --head=MYAPP@head --version-path=/path/to/app/versions
+      > eval $(docker-machine env occams-develop)
+      > docker-machine ls
+      NAME             ACTIVE   DRIVER       STATE     URL                         SWARM   DOCKER    ERRORS
+      occams-develop   *        virtualbox   Running   tcp://192.168.99.100:2376           v1.12.2
 
-If your project's revision depends on a **another** project's revision::
+   Note the asterisk in the "ACTIVE" column.
 
-  $ alembic -c /path/to/ini revision -m "MESSAGE" --head=MYAPP@base --depends-on=REVISION --version-path=/path/to/app/versions
+#. Clone the application and build the containers::
+
+      > git clone https://github.com/razorlabs/occams
+      > cd occams
+      > docker-compose build
+
+   This will take a moment, so it's a good idea to refill on coffee at this time.
+
+#. Back? Ok, spin up the containers, there will some additional building for
+   dependencies, this is normal::
+
+      > docker-compose up -d
+
+#. Build the static assess::
+
+      > docker-compose run app bower install
+
+#. Build the database tables::
+
+      > docker-compose run app occams_initdb develop.ini
+
+#. Get the IP address of the machine and use it to navigate to http://the.ip.addr.es:3000/ ::
+
+      > docker-machine ip occams-develop
 
 
+You now should have a working OCCAMS instance.
+
+
+Common Tasks
+""""""""""""
+
+How do I add more users?
+''''''''''''''''''''''''
+
+Modify the data setting in the `[plugin:dev_users]` section of the develop.ini
+file. There is already a test user there for you, so use that a template.
+
+
+How do I run the tests?
+'''''''''''''''''''''''
+
+Create a test user and database to run the tests.
+
+::
+
+    > psql -U occams -h `docker-machine ip occams-develop` -c "CREATE USER test"
+    > psql -U occams -h `docker-machine ip occams-develop` -c "CREATE DATABASE test OWNER test"
+    > docker-compose run app py.test --db postgresql://test@postgres/test --redis redis://redis/9
+
+
+How do I check the logs?
+''''''''''''''''''''''''
+
+::
+
+    > docker-compose logs -f
+
+How do I access the database?
+'''''''''''''''''''''''''''''
+
+Install the Postgres client on the host machine and run::
+
+  > psql -U occams -h `docker-machine ip occams-develop`
+
+How do I restart the application?
+'''''''''''''''''''''''''''''''''
+
+::
+
+    > docker-compose restart app
+
+
+How do I reset the database and start over again?
+'''''''''''''''''''''''''''''''''''''''''''''''''
+
+::
+
+    > docker-compose down
+    > docker volume rm postgres
+    > docker-compose up -d
+    > docker-compose run app occams_initdb develop.ini
