@@ -101,14 +101,6 @@ Installation
 
       > docker-compose up -d
 
-#. Build the static assess::
-
-      > docker-compose run app bower install
-
-#. Build the database tables::
-
-      > docker-compose run app occams_initdb develop.ini
-
 #. Get the IP address of the machine and use it to navigate to http://the.ip.addr.es:3000/ ::
 
       > docker-machine ip occams-develop

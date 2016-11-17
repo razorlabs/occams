@@ -5,7 +5,7 @@
 
 app:
   build: .
-  command: gunicorn --no-sendfile --paster develop.ini
+  command: dockerize -wait tcp://postgres:5432 ./docker-app-entrypoint.sh
   restart: always
   ports:
     - "3000:3000"
@@ -24,7 +24,7 @@ app:
 
 celery:
   build: .
-  command: celery worker --autoreload --app occams --loglevel INFO --without-gossip --ini develop.ini
+  command: dockerize -wait tcp://postgres:5432 ./docker-celery-entrypoint.sh
   restart: always
   environment:
     - C_FORCE_ROOT=1

@@ -10,7 +10,11 @@ FROM centos:7
 RUN yum update -y
 RUN yum groupinstall -y 'Development Tools'
 RUN yum install -y epel-release
-RUN yum install -y postgresql-devel python-pip python-devel
+RUN yum install -y postgresql-devel python-pip python-devel wget
+
+# Install bash script to allow us to wait for dependent services to be "ready"
+RUN wget https://github.com/jwilder/dockerize/releases/download/v0.2.0/dockerize-linux-amd64-v0.2.0.tar.gz \
+    && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-v0.2.0.tar.gz
 
 RUN yum install -y nodejs npm jsmin
 RUN npm install -g less && npm install -g bower
