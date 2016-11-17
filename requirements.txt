@@ -3,7 +3,7 @@
 #
 
 alembic
-celery[redis]
+celery[redis]<4.0.0
 cssmin
 gevent
 gunicorn
