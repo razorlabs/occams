@@ -22,8 +22,6 @@ def includeme(config):
     config.add_route('forms.fields',                        '/forms/{form}/versions/{version}/fields',              factory=models.FormFactory, traverse='/{form}/versions/{version}/fields')
     config.add_route('forms.field',                         '/forms/{form}/versions/{version}/fields/{field}',      factory=models.FormFactory, traverse='/{form}/versions/{version}/fields/{field}')
 
-    config.add_route('forms.workflow',                      '/forms/workflows/default')
-
     config.add_route('studies.settings',                    '/studies/settings')
 
     config.add_route('studies.sites',                       '/studies/sites',                           factory=models.SiteFactory)
