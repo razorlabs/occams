@@ -10,7 +10,7 @@
 CONFIG_FILE=develop.ini
 
 
-if [[ ! $(alembic -c $CONFIG_FILE current &>/dev/null) ]]; then
+if [[ ! $(alembic current &>/dev/null) ]]; then
 
   echo "Database has not been created yet, waiting for app to create it..."
   sleep 3

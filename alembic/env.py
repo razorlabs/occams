@@ -1,6 +1,7 @@
 from __future__ import with_statement
 from alembic import context
 from sqlalchemy import engine_from_config, pool, text
+from sqlalchemy.engine.url import make_url
 from logging.config import fileConfig
 
 # this is the Alembic Config object, which provides
@@ -23,6 +24,17 @@ target_metadata = None
 # ... etc.
 
 
+def _get_blame_user(url_str):
+    url = make_url(url_str)
+
+    user = url.username
+    host = url.host or 'localhost'
+
+    blame = '{}@{}'.format(user, host).lower()
+
+    return blame
+
+
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
 
@@ -38,7 +50,7 @@ def run_migrations_offline():
 
     url = config.get_main_option("sqlalchemy.url")
 
-    context.configure(url=url, blame=config.get_main_option('blame'))
+    context.configure(url=url, blame=_get_blame_user(url))
 
     with context.begin_transaction():
         context.run_migrations()
@@ -53,7 +65,6 @@ def run_migrations_online():
     """
 
     connectable = config.attributes.get('connection', None)
-    blame = config.get_main_option('blame')
 
     if connectable is None:
         connectable = engine_from_config(
@@ -68,6 +79,8 @@ def run_migrations_online():
             connection=connection,
             target_metadata=target_metadata,
         )
+
+        blame = _get_blame_user(config.get_main_option('sqlalchemy.url'))
 
         with context.begin_transaction():
             connection.execute(

@@ -25,7 +25,7 @@ parser = argparse.ArgumentParser(description='Initialize database')
 parser.add_argument(
     'config',
     metavar='INI',
-    help='Installs using an existing application INI')
+    help='Installs using an existing alembic INI file')
 
 
 def main(argv=sys.argv):
@@ -34,14 +34,16 @@ def main(argv=sys.argv):
     setup_logging(args.config)
     alembic_cfg = Config(args.config)
 
-    blame = alembic_cfg.get_main_option('blame')
     engine = create_engine(alembic_cfg.get_main_option('sqlalchemy.url'))
 
-    assert blame, 'Need to blame someone!'
+    user = engine.url.username
+    host = engine.url.host or 'localhost'
+
+    blame = '{}@{}'.format(user, host).lower()
 
     with engine.begin() as connection:
         connection.execute(
-            sa.text('SET LOCAL "application.name" = :param'), param='occams'
+            sa.text('SET LOCAL "application.name" = :param'), param='initdb'
         )
         connection.execute(
             sa.text('SET LOCAL "application.user" = :param'), param=blame

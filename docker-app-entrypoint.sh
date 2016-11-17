@@ -19,10 +19,10 @@ if [[ ! -d "./occams/static/bower_components" ]]; then
 fi
 
 
-if [[ ! $(alembic -c $CONFIG_FILE current &>/dev/null) ]]; then
+if [[ ! $(alembic current &>/dev/null) ]]; then
 
   echo "Database has not been created yet, running initdb"
-  occams_initdb $CONFIG_FILE
+  occams_initdb alembic.ini
 
 fi
 
