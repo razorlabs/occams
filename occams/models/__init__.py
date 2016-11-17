@@ -1,4 +1,5 @@
-from sqlalchemy import engine_from_config
+import six
+from sqlalchemy import engine_from_config, text
 from sqlalchemy.orm import sessionmaker, configure_mappers
 import zope.sqlalchemy
 
@@ -107,6 +108,35 @@ def get_tm_session(session_factory, transaction_manager):
         dbsession, transaction_manager=transaction_manager)
 
     return dbsession
+
+
+def get_blame_from_url(url):
+    """
+    Extracts the username@hostname from the connection URI or string
+    """
+
+    if isinstance(url, six.string_types):
+        url = make_url(url)
+
+    user = url.username
+    host = url.host or 'localhost'
+
+    blame = '{}@{}'.format(user, host).lower()
+
+    return blame
+
+
+def set_pg_locals(connectable, appname, blame):
+    """
+    Sets the 'application.user' and 'application.name' for the audit log
+    """
+
+    connectable.execute(
+        text('SET LOCAL "application.name" = :param'), {'param': appname}
+    )
+    connectable.execute(
+        text('SET LOCAL "application.user" = :param'), {'param': blame}
+    )
 
 
 def includeme(config):

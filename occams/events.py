@@ -5,6 +5,8 @@ Pyramid-specific events
 import sqlalchemy as sa
 from pyramid.events import subscriber, NewResponse, NewRequest
 
+from . import models
+
 
 @subscriber(NewResponse)
 def vary_json(event):
@@ -28,14 +30,7 @@ def track_user_on_request(event):
     dbsession.info['settings'] = request.registry.settings
 
     if request.authenticated_userid is not None:
-        dbsession.execute(
-            sa.text('SET LOCAL "application.name" = :param'),
-            {'param': 'wsgi'}
-        )
-        dbsession.execute(
-            sa.text('SET LOCAL "application.user" = :param'),
-            {'param': request.authenticated_userid}
-        )
+        models.set_pg_locals(dbsession, 'wsgi', request.authenticated_userid)
 
     # Store the CSRF token in a cookie since we'll need to sent it back
     # frequently in single-page views.

@@ -18,6 +18,7 @@ import sqlalchemy as sa
 from sqlalchemy import create_engine
 from pyramid.paster import setup_logging
 
+from .. import models
 from ..models.meta import Base
 
 
@@ -35,19 +36,10 @@ def main(argv=sys.argv):
     alembic_cfg = Config(args.config)
 
     engine = create_engine(alembic_cfg.get_main_option('sqlalchemy.url'))
-
-    user = engine.url.username
-    host = engine.url.host or 'localhost'
-
-    blame = '{}@{}'.format(user, host).lower()
+    blame = models.get_blame_from_url(engine.url)
 
     with engine.begin() as connection:
-        connection.execute(
-            sa.text('SET LOCAL "application.name" = :param'), param='initdb'
-        )
-        connection.execute(
-            sa.text('SET LOCAL "application.user" = :param'), param=blame
-        )
+        models.set_pg_locals(connection, 'initdb', blame)
 
         Base.metadata.create_all(connection)
 
