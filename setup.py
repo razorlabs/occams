@@ -24,7 +24,7 @@ REQUIRES = [
     'pyramid>=1.7',                     # Framework
     'pyramid_chameleon',                # Templating
     'pyramid_exclog',                   # Logging for production
-    'pyramid_tm==0.12.1',               # Centralized transations
+    'pyramid_tm>=1.1.1,<2.0.0',         # Centralized transations
     'pyramid_redis_sessions',           # HTTP session with redis backend
     'pyramid_redis',
     'pyramid_webassets',                # Asset management (ala grunt)
