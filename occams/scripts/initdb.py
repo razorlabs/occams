@@ -32,7 +32,7 @@ def main(argv=sys.argv):
 
     setup_logging(args.config)
     app_settings = get_appsettings(args.config)
-    alembic_cfg = Config(args.config)
+    alembic_cfg = Config(args.config.split('#')[0])
 
     blame = alembic_cfg.get_main_option('blame')
     engine = create_engine(alembic_cfg.get_main_option('sqlalchemy.url'))
