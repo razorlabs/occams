@@ -32,7 +32,7 @@ REQUIRES = [
     'repoze.who>=2.3.0',
     'rutter',                           # Virtual path mounting
     'six',                              # Py 2 & 3 compatibilty
-    'sqlalchemy>=1.0.0,<1.0.99',        # Database ORM
+    'sqlalchemy>=1.0.17,<1.0.99',        # Database ORM
     'tabulate',                         # ASCII tables for CLI pretty-print
     'wtforms>=2.0.0',
     'wtforms-json',
