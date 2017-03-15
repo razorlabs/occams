@@ -24,7 +24,7 @@ REQUIRES = [
     'pyramid>=1.7',                     # Framework
     'pyramid_chameleon',                # Templating
     'pyramid_exclog',                   # Logging for production
-    'pyramid_tm>=1.1.1,<2.0.0',         # Centralized transations
+    'pyramid_tm>=1.1.1,<1.99.99',         # Centralized transations
     'pyramid_redis_sessions',           # HTTP session with redis backend
     'pyramid_redis',
     'pyramid_webassets',                # Asset management (ala grunt)
@@ -32,7 +32,7 @@ REQUIRES = [
     'repoze.who>=2.3.0',
     'rutter',                           # Virtual path mounting
     'six',                              # Py 2 & 3 compatibilty
-    'SQLAlchemy',                       # Database ORM
+    'SQLAlchemy>=1.0.0,<1.0.99',        # Database ORM
     'tabulate',                         # ASCII tables for CLI pretty-print
     'wtforms>=2.0.0',
     'wtforms-json',
