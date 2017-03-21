@@ -15,6 +15,9 @@
     "bootstrap-fileinput": "4.1.x",
     "bootstrap-switch": "3.3.x"
   },
+  "resolutions": {
+    "jquery": "2.x"
+  },
   "devDependencies": {
     "mocha": "2.1.x"
   },
