@@ -88,7 +88,7 @@ def preview(context, request):
         upload_path = tempfile.mkdtemp()
         entity = models.Entity(schema=context)
         try:
-            apply_data(dbsession, entity, form.patch_data, upload_path)
+            apply_data(dbsession, entity, form.data, upload_path)
         finally:
             shutil.rmtree(upload_path)
 
