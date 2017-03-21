@@ -16,10 +16,11 @@ class LoginForm(wtforms.Form):
     login = wtforms.fields.html5.EmailField(
         _(u'Login'),
         validators=[
-            wtforms.validators.InputRequired(),
+            wtforms.validators.InputRequired(message='Account email required'),
             # Emails can only be 254 characters long:
             #   http://stackoverflow.com/a/1199238
-            wtforms.validators.Length(min=10, max=254),
+            wtforms.validators.Length(
+                min=10, max=254, message='Invalid email length'),
             # Validate 99.99% of acceptable email formats
             wtforms.validators.Regexp(
                 r'(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)',
@@ -30,11 +31,12 @@ class LoginForm(wtforms.Form):
     password = wtforms.PasswordField(
         _(u'Password'),
         validators=[
-            wtforms.validators.InputRequired(),
+            wtforms.validators.InputRequired(message='Password required'),
             # Enforce a limit on password lengh input to prevent
             # submissions of excessively long paragraphs
             # https://www.owasp.org/index.php/Authentication_Cheat_Sheet
-            wtforms.validators.Length(max=128)
+            wtforms.validators.Length(
+                max=128, message='Invalid password length')
         ])
 
 
@@ -43,6 +45,7 @@ def login(request):
 
     dbsession = request.dbsession
     form = LoginForm(request.POST)
+    errors = []
 
     if request.method == 'POST' and form.validate():
         # XXX: Hack for this to work on systems that have not set the
@@ -55,9 +58,8 @@ def login(request):
         authenticated, headers = who_api.login(form.data)
 
         if not authenticated:
-            request.session.flash(_(u'Invalid credentials'), 'danger')
+            errors += [_(u'Invalid credentials')]
         else:
-
             referrer = request.GET.get('referrer')
             if not referrer or request.route_path('accounts.login') in referrer:
                 # TODO: Maybe send the user to their user dashboard instead?
@@ -68,4 +70,7 @@ def login(request):
     # forcefully forget any credentials
     request.response.headerlist.extend(forget(request))
 
-    return {'form': form}
+    return {
+        'form': form,
+        'errors': errors + list(form.login.errors) + list(form.password.errors)
+    }
