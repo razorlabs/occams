@@ -83,6 +83,7 @@ def preview(context, request):
     form = form_class(request.POST)
     form_id = 'form-preview'
     entity = None
+    attachments = {}
 
     if request.method == 'POST' and form.validate():
         upload_path = tempfile.mkdtemp()
@@ -92,11 +93,14 @@ def preview(context, request):
         finally:
             shutil.rmtree(upload_path)
 
+        attachments = {a.id: a for a in six.itervalues(entity.attachments)}
+
         # Remove from session so entity or attributes don't persist in db
         dbsession.expunge(entity)
 
     return {
         'entity': entity,
+        'attachments': attachments,
         'form_id': form_id,
         'form_content': render_form(
             form,

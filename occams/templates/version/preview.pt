@@ -35,13 +35,17 @@
             <tr tal:repeat="attribute entity.schema.iterleafs()">
               <td><code>${attribute.name}</code></td>
               <td tal:define="
-                  value     entity[attribute.name]|nothing;
+                  value     entity.data[attribute.name]|nothing;
                   is_list   isinstance(value, list);
                   ui_value  python:','.join(value) if is_list else value;">
                   <code tal:condition="attribute.type != 'blob' and value">${ui_value}</code>
-                  <tal:blob tal:condition="attribute.type == 'blob' and value">
-                    <code>${value.file_name}</code>
-                    <span class="label label-info">${value.mime_type}</span>
+                  <tal:blob tal:condition="attribute.type == 'blob'">
+                    <tal:attachment
+                        tal:define="value attachments[value]|nothing"
+                        tal:condition="value">
+                      <code>${value.file_name}</code>
+                      <span class="label label-info">${value.mime_type}</span>
+                    </tal:attachment>
                   </tal:blob>
               </td>
             </tr>
