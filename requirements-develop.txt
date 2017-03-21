@@ -1,0 +1,25 @@
+#
+# Developer-specific packages
+#
+
+-r ./requirements.txt
+
+# Documentation
+sphinx==1.5.*
+sphinx-autobuild==0.6.*
+
+# Interactive debugging
+pyramid_debugtoolbar==3.0.*
+
+# Unit tests
+pytest==3.*
+pytest-cov==2.*
+pytest-factoryboy==1.3.*
+factory_boy==2.*
+Faker==0.7.*
+WebTest==2.0.*
+beautifulsoup4==4.5.*
+mock==2.0.*
+
+# Developer-managed accounts
+who_dev==0.0.*

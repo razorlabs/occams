@@ -1,27 +1,37 @@
 #
-# Production-level requirements
+# Production requirements
 #
 
-### Forks
-
-# repoze.who has a bug that was fixed but has yet to be published, so we
-# install directly from their github repository.
--e git+https://github.com/repoze/repoze.who@master#egg=repoze.who
--e git+https://github.com/m-martinez/who_ldap@userdata_dict#egg=who_ldap
-
-
-### OCCAMS
-
-# NOTE:
-# These settings are not recommend for development. Instead it is highly
-# advised you clone the desired repositories and use the full local path
-# instead of the git links.
-
--e git+https://github.com/younglabs/occams_datastore@master#egg=occams_datastore[test]
--e git+https://github.com/younglabs/occams@master#egg=occams[test,docs,ldap,postgresql]
-
--e git+https://github.com/younglabs/occams_accounts@master#egg=occams_accounts[test]
--e git+https://github.com/younglabs/occams_forms@master#egg=occams_forms[test]
--e git+https://github.com/younglabs/occams_roster@master#egg=occams_roster[test]
--e git+https://github.com/younglabs/occams_studies@master#egg=occams_studies[test]
--e git+https://github.com/younglabs/occams_lims@master#egg=occams_lims[test]
+alembic==0.9.*                              # Database structure migrations
+babel==2.*                                  # i18n
+celery[redis]==3.1.*                        # Asynchronous queue
+cssmin==0.2.*                               # CSS asset compression
+filemagic==1.6.*                            # File input validation
+gevent==1.2.*                               # Enables usage of SSE on gunicorn
+gunicorn==19.3                              # WSGI server
+humanize==0.5.*                             # human readable units of measurement
+jsmin==2.2.*                                # Javascript asset copression
+ldap3==1.*
+lingua==4.*                                 # i18n
+psycopg2==2.7.*                             # PostgreSQL database driver
+python-dateutil==2.*                        # Better fuzzy date parsing
+python-slugify==1.*                         # Path-friendly name generator
+pyramid==1.7.*                              # Framework
+pyramid_chameleon==0.*                      # Templating
+pyramid_exclog==0.*                         # Error log messaging for production
+pyramid_redis==0.1.*
+pyramid_redis_sessions==1.0.*               # Redis-based HTTP session
+pyramid_tm==1.*                             # Centralized transactions
+pyramid_webassets==0.9.*                    # Asset management and compilation
+pyramid_who==0.3.*                          # User authentication
+repoze.who==2.*
+rutter==0.*                                 # Virtual URL path proxy-passing
+six==1.*                                    # Python 2 & 3 compatibility
+sqlalchemy==1.0.*                           # ORM
+tabulate==0.7.*                             # ASCII tables for CLI pretty printing
+unicodecsv==0.14.* ; python_version < '3.0' # Handles unicode processing in Python 2
+who_ldap==3.2.*
+wtforms==2.*                                # Data input validation
+wtforms-components==0.10.*
+wtforms-json==0.3.*
+zope.sqlalchemy==0.7.*                      # Connects sqllachemy to pyramid_tm
