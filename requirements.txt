@@ -11,7 +11,7 @@ gevent==1.2.*                               # Enables usage of SSE on gunicorn
 gunicorn==19.3                              # WSGI server
 humanize==0.5.*                             # human readable units of measurement
 jsmin==2.2.*                                # Javascript asset copression
-ldap3==1.*
+ldap3==2.4.*
 lingua==4.*                                 # i18n
 psycopg2==2.7.*                             # PostgreSQL database driver
 python-dateutil==2.*                        # Better fuzzy date parsing
@@ -30,7 +30,7 @@ six==1.*                                    # Python 2 & 3 compatibility
 sqlalchemy==1.0.*                           # ORM
 tabulate==0.7.*                             # ASCII tables for CLI pretty printing
 unicodecsv==0.14.* ; python_version < '3.0' # Handles unicode processing in Python 2
-who_ldap==3.2.*
+who_ldap==4.0.*
 wtforms==2.*                                # Data input validation
 wtforms-components==0.10.*
 wtforms-json==0.3.*
