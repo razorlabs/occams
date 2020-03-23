@@ -86,8 +86,7 @@
             patientData: JSON.parse($('#patient-data').text()),
             entitiesData: JSON.parse($('#entities-data').text()),
             formsUrl: "${request.current_route_path(_route_name='studies.patient_forms')}"
-          }),
-          document.getElementById('views-patient-main')
+          })
         );
       });
     </script>

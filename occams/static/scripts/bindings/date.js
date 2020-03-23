@@ -29,7 +29,7 @@
   ko.bindingHandlers.datetimepicker = {
     init: function(element, valueAccessor, allBindingsAccessor) {
 
-      if (supportsDateInput) {
+      if (window.supportsDateInput) {
         return;
       }
 

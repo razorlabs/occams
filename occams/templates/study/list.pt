@@ -38,7 +38,7 @@
           <div class="panel-body" tal:condition="modified_count <= 0">
             <p class="text-muted text-center" i18n:translate="">Nothing viewed recently</p>
           </div>
-          <ul class="list-group" tal:condition="modified > 0">
+          <ul class="list-group" tal:condition="modified_count > 0">
             <tal:patients tal:define="humanize import:humanize" repeat="patient modified">
               <li class="list-group-item">
                 <a href="${request.route_path('studies.patient', patient=patient.pid)}">${patient.pid}</a>

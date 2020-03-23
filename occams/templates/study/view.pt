@@ -567,7 +567,7 @@
       $(function(){
         var scheduleUrl = "${request.current_route_path(_route_name='studies.study_schedule')}",
             studyData = JSON.parse($('#study-data').text());
-        ko.applyBindings(new StudyView(studyData, scheduleUrl), document.getElementById('study-main'));
+        ko.applyBindings(new StudyView(studyData, scheduleUrl));
         setupScheduleGrid();
       });
     </script>

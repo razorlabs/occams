@@ -104,8 +104,7 @@
         ko.applyBindings(
           new PatientSearchView({
             resultsData: JSON.parse($('#results-data').text())
-            }),
-          document.getElementById('views-patient-search'));
+            })
       });
     </script>
     <tal:json define="json import: json">

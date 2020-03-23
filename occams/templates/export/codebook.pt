@@ -114,8 +114,7 @@
     <script>
       $(function(){
         ko.applyBindings(
-          new CodebookViewModel,
-          document.getElementById('exports_codebook')
+          new CodebookViewModel
         );
       });
     </script>
