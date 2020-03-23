@@ -180,7 +180,7 @@
   <metal:content-slot fill-slot="javascript-slot">
     <script>
       $(function(){
-        ko.applyBindings(new FormListView, document.getElementById('form_list'));
+        ko.applyBindings(new FormListView);
       });
     </script>
 

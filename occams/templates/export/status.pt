@@ -231,8 +231,7 @@
       ko.applyBindings(
         new StatusViewModel({
           notifications_url: "${request.route_path('studies.exports_notifications')}",
-        }),
-        document.getElementById('exports_status')
+        })
       );
     });
   </script>
