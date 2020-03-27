@@ -324,13 +324,12 @@ class Test_edit_json:
         It should allow the user to create cycle forms
         """
         from datetime import date, timedelta
-        from occams import models as datastore
         from occams import models
 
-        form1 = datastore.Schema(
+        form1 = models.Schema(
             name='form1', title=u'', publish_date=date.today())
 
-        form2 = datastore.Schema(
+        form2 = models.Schema(
             name='form2', title=u'', publish_date=date.today())
 
         study = models.Study(
@@ -367,7 +366,7 @@ class Test_edit_json:
         assert ['form1'] == \
             [e['schema']['name'] for e in res['entities']]
 
-        contexts = dbsession.query(datastore.Context).all()
+        contexts = dbsession.query(models.Context).all()
 
         assert sorted(['patient', 'visit']) == \
             sorted([c.external for c in contexts])
@@ -386,7 +385,7 @@ class Test_edit_json:
         assert sorted(['form1', 'form2']) == \
             sorted([e['schema']['name'] for e in res['entities']])
 
-        contexts = dbsession.query(datastore.Context).all()
+        contexts = dbsession.query(models.Context).all()
 
         assert sorted([(x, e['id'])
                        for e in res['entities']
@@ -468,7 +467,6 @@ class Test_edit_json:
         It should not use retracted forms, even if there are the most recent
         """
         from datetime import date, timedelta
-        from occams import models as datastore
         from occams import models
 
         t0 = date.today()
@@ -484,8 +482,8 @@ class Test_edit_json:
 
         cycle1 = models.Cycle(name='week-1', title=u'', week=1)
         cycle1.schemata.update([
-            datastore.Schema(name='form1', title=u'', publish_date=t0),
-            datastore.Schema(name='form1', title=u'', publish_date=t2,
+            models.Schema(name='form1', title=u'', publish_date=t0),
+            models.Schema(name='form1', title=u'', publish_date=t2,
                              retract_date=t2)])
         study.cycles.append(cycle1)
 
@@ -575,10 +573,9 @@ class Test_delete_json:
         It should remove all visit-associated forms.
         """
         from datetime import date
-        from occams import models as datastore
         from occams import models
 
-        schema = datastore.Schema(
+        schema = models.Schema(
             name=u'sample',
             title=u'Some Sample',
             publish_date=date.today())
@@ -611,7 +608,7 @@ class Test_delete_json:
             cycles=[cycle],
             visit_date=date.today())
 
-        visit.entities.add(datastore.Entity(
+        visit.entities.add(models.Entity(
             schema=schema,
             collect_date=date.today()))
 
@@ -623,7 +620,7 @@ class Test_delete_json:
         self._call_fut(visit, req)
 
         assert dbsession.query(models.Visit).get(visit_id) is None
-        assert 0 == dbsession.query(datastore.Entity).count()
+        assert 0 == dbsession.query(models.Entity).count()
 
 
 class Test_form_delete_json:
@@ -638,12 +635,11 @@ class Test_form_delete_json:
         """
         from datetime import date, timedelta
         from pyramid.httpexceptions import HTTPOk
-        from occams import models as datastore
         from occams import models
 
         cycle = models.Cycle(name='week-1', title=u'', week=1)
 
-        schema = datastore.Schema(
+        schema = models.Schema(
             name=u'sample', title=u'', publish_date=date.today())
 
         study = models.Study(
@@ -658,7 +654,7 @@ class Test_form_delete_json:
         site = models.Site(name=u'ucsd', title=u'UCSD')
 
         default_state = (
-            dbsession.query(datastore.State)
+            dbsession.query(models.State)
             .filter_by(name=u'pending-entry')
             .one())
 
@@ -666,11 +662,11 @@ class Test_form_delete_json:
         patient_a = models.Patient(site=site, pid=u'12345')
         visit_a = models.Visit(
             patient=patient_a, cycles=[cycle], visit_date=t_a)
-        entity_a_1 = datastore.Entity(
+        entity_a_1 = models.Entity(
             schema=schema, collect_date=t_a, state=default_state)
-        entity_a_2 = datastore.Entity(
+        entity_a_2 = models.Entity(
             schema=schema, collect_date=t_a, state=default_state)
-        entity_a_3 = datastore.Entity(
+        entity_a_3 = models.Entity(
             schema=schema, collect_date=t_a, state=default_state)
         list(map(visit_a.entities.add, [entity_a_1, entity_a_2, entity_a_3]))
 

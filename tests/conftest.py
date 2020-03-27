@@ -1,7 +1,7 @@
 """
 Testing fixtures
 
-To run the tests you'll then need to run the following command:
+To run the tests yo'll then need to run the following command:
 
     py.test --db=postgres://user:pass@host/db
 
@@ -19,11 +19,7 @@ import pytest
 from sqlalchemy.schema import CreateTable
 from sqlalchemy.ext.compiler import compiles
 
-
-REDIS_URL = 'redis://localhost/9'
-
 USERID = 'test_user'
-
 
 def pytest_addoption(parser):
     """
@@ -32,6 +28,7 @@ def pytest_addoption(parser):
     :param parser: The pytest command-line parser
     """
     parser.addoption('--db', action='store', help='db string for testing')
+    parser.addoption('--redis', action='store', help='redis uri for testing')
     parser.addoption('--reuse', action='store_true',
                      help='Reuses existing database')
 
@@ -67,6 +64,7 @@ def create_tables(request):
     :returns: configured database session
     """
     from sqlalchemy import create_engine
+    from occams.models import set_pg_locals
     from occams.models.meta import Base
 
     db_url = request.config.getoption('--db')
@@ -76,7 +74,7 @@ def create_tables(request):
 
     if not reuse:
         with engine.connect() as connection:
-            connection.info['blame'] = 'test_installer'
+            set_pg_locals(connection, 'pytest', USERID)
             # This is very similar to the init_db script: create tables
             # and pre-populate with expected data
             Base.metadata.create_all(connection)
@@ -90,7 +88,7 @@ def create_tables(request):
     request.addfinalizer(drop_tables)
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def config(request):
     """
     (Integration Testing) Instantiates a Pyramid testing configuration
@@ -127,29 +125,23 @@ def dbsession(config):
     :returns: An instantiated sqalchemy database session
     """
     from occams import models
-    import occams.models.events
-    import zope.sqlalchemy
+    from occams.models import set_pg_locals, get_tm_session
+    import transaction
 
-    dbsession = config.registry['dbsession_factory']()
+    session_factory = config.registry['dbsession_factory']
+    dbsession = get_tm_session(session_factory, transaction.manager)
 
-    occams.models.events.register(dbsession)
-    zope.sqlalchemy.register(dbsession)
-
-    # Pre-configure with a blame user
-    blame = models.User(key=USERID)
-    dbsession.add(blame)
-    dbsession.flush()
-    dbsession.info['blame'] = blame
+    set_pg_locals(dbsession.bind, 'pytest', USERID)
 
     # Other expected settings
     dbsession.info['settings'] = config.registry.settings
 
     # Hardcoded workflow
     dbsession.add_all([
-        models.State(name=u'pending-entry', title=u'Pending Entry'),
-        models.State(name=u'pending-review', title=u'Pending Review'),
-        models.State(name=u'pending-correction', title=u'Pending Correction'),
-        models.State(name=u'complete', title=u'Complete')
+        models.State(name='pending-entry', title='Pending Entry'),
+        models.State(name='pending-review', title='Pending Review'),
+        models.State(name='pending-correction', title='Pending Correction'),
+        models.State(name='complete', title='Complete')
     ])
 
     return dbsession
@@ -209,170 +201,3 @@ def factories(dbsession):
 
     return factories
 
-
-@pytest.fixture(scope='session')
-def wsgi(request):
-    """
-    (Functional Testing) Sets up a full-stacked singleton WSGI app
-
-    :param request: The pytest context
-
-    :returns: a WSGI application
-    """
-    import tempfile
-    import shutil
-    import six
-    from occams import main
-
-    # The pyramid_who plugin requires a who file, so let's create a
-    # barebones files for it...
-    who_ini = tempfile.NamedTemporaryFile()
-    who = six.moves.configparser.ConfigParser()
-    who.add_section('general')
-    who.set('general', 'request_classifier',
-            'repoze.who.classifiers:default_request_classifier')
-    who.set('general', 'challenge_decider',
-            'repoze.who.classifiers:default_challenge_decider')
-    who.set('general', 'remote_user_key', 'REMOTE_USER')
-    who.write(who_ini)
-    who_ini.flush()
-
-    db_url = request.config.getoption('--db')
-
-    tmp_dir = tempfile.mkdtemp()
-
-    wsgi = main({}, **{
-        'redis.url': REDIS_URL,
-        'redis.sessions.secret': 'sekrit',
-
-        'who.config_file': who_ini.name,
-        'who.identifier_id': '',
-
-        # Enable regular error messages so we can see useful traceback
-        'debugtoolbar.enabled': True,
-        'pyramid.debug_all': True,
-
-        'webassets.debug': True,
-
-        'occams.apps': ['occams', 'occams'],
-
-        'sqlalchemy.url': db_url,
-        'occams.groups': [],
-
-        'celery.broker.url': REDIS_URL,
-        'celery.backend.url': REDIS_URL,
-        'celery.blame': 'celery@localhost',
-
-        'studies.export.dir': '/tmp',
-        'studies.export.plans': [
-            'occams.exports.pid.PidPlan',
-            'occams.exports.enrollment.EnrollmentPlan',
-            'occams.exports.visit.VisitPlan',
-            'occams.exports.schema.SchemaPlan.list_all',
-        ],
-        'studies.pid.package': 'occams',
-        'studies.blob.dir': '/tmp',
-    })
-
-    who_ini.close()
-
-    def cleanup():
-        shutil.rmtree(tmp_dir)
-
-    request.addfinalizer(cleanup)
-
-    return wsgi
-
-
-@pytest.yield_fixture
-def app(request, wsgi, dbsession):
-    """
-    (Functional Testing) Initiates a user request against a WSGI stack
-
-    :param request: The pytest context
-    :param wsgi: An initialized WSGI stack
-    :param dbsession: A database session for seting up pre-existing data
-
-    :returns: a test app request against the WSGI instance
-    """
-    import transaction
-    from webtest import TestApp
-    from zope.sqlalchemy import mark_changed
-    from occams import models as models
-
-    # Save all changes up tho this point (dbsession does some configuration)
-    with transaction.manager:
-        blame = models.User(key='workflow@localhost')
-        dbsession.add(blame)
-        dbsession.flush()
-        dbsession.info['blame'] = blame
-
-        dbsession.add_all([
-            models.State(name=u'pending-entry', title=u'Pending Entry'),
-            models.State(name=u'pending-review', title=u'Pending Review'),
-            models.State(
-                name=u'pending-correction', title=u'Pending Correction'),
-            models.State(name=u'complete', title=u'Complete')
-        ])
-
-    app = TestApp(wsgi)
-
-    yield app
-
-    with transaction.manager:
-        # DELETE is dramatically faster than TRUNCATE
-        # http://stackoverflow.com/a/11423886/148781
-        # We also have to do this as a raw query becuase SA does
-        # not have a way to invoke server-side cascade
-        dbsession.execute('DELETE FROM "rostersite" CASCADE')
-        dbsession.execute('DELETE FROM "study" CASCADE')
-        dbsession.execute('DELETE FROM "patient" CASCADE')
-        dbsession.execute('DELETE FROM "site" CASCADE')
-        dbsession.execute('DELETE FROM "schema" CASCADE')
-        dbsession.execute('DELETE FROM "export" CASCADE')
-        dbsession.execute('DELETE FROM "state" CASCADE')
-        dbsession.execute('DELETE FROM "user" CASCADE')
-        mark_changed(dbsession)
-
-
-@pytest.fixture
-@pytest.mark.usefixtures('create_tables')
-def celery(request):
-    """
-    (Function Testing) Sets up a celery application for testing
-
-    :param request: The pytest context
-    """
-    import shutil
-    import tempfile
-    import mock
-    from redis import StrictRedis
-    from sqlalchemy import create_engine
-    from occams.celery import Session
-    from occams import models as models
-    from occams import tasks
-
-    settings = {
-        'studies.export.dir': tempfile.mkdtemp(),
-        'celery.blame': USERID
-    }
-
-    tasks.app.userid = settings['celery.blame']
-    tasks.app.redis = StrictRedis.from_url(REDIS_URL)
-    tasks.app.settings = settings
-
-    db_url = request.config.getoption('--db')
-    engine = create_engine(db_url)
-    Session.configure(bind=engine, info={'settings': settings})
-    Session.add(models.User(key=settings['celery.blame']))
-    Session.flush()
-
-    commitmock = mock.patch('occams.tasks.Session.commit')
-    commitmock.start()
-
-    def cleanup():
-        commitmock.stop()
-        shutil.rmtree(settings['studies.export.dir'])
-        Session.remove()
-
-    request.addfinalizer(cleanup)

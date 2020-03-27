@@ -2,7 +2,10 @@
 Common metadata modules
 """
 
+from datetime import datetime
+
 import sqlalchemy as sa
+from sqlalchemy import orm
 from sqlalchemy.ext.declarative import declared_attr
 
 from .meta import Base
@@ -17,19 +20,26 @@ def create_touch_procedures(target, connection, **kw):
     connection.execute(r"""
         CREATE OR REPLACE FUNCTION touch() RETURNS TRIGGER AS $$
         DECLARE
+            _user_id int;
             _user text;
             _timestamp timestamp;
         BEGIN
-            _user := (SELECT current_setting('application.user'));
             _timestamp := timeofday();
+            _user := (SELECT lower(current_setting('application.user')));
 
-            IF tg_op = 'INSERT' THEN
-                NEW.created_by := lower(_user);
-                NEW.created_at := _timestamp;
+            SELECT id FROM account WHERE key = _user INTO _user_id;
+
+            IF NOT FOUND THEN
+                INSERT INTO account (key) VALUES (_user) RETURNING id INTO _user_id;
             END IF;
 
-            NEW.modified_by := lower(_user);
-            NEW.modified_at := _timestamp;
+            IF tg_op = 'INSERT' THEN
+                NEW.create_user_id := _user_id;
+                NEW.create_date := _timestamp;
+            END IF;
+
+            NEW.modify_user_id := _user_id;
+            NEW.modify_date := _timestamp;
 
             RETURN NEW;
         END;
@@ -123,25 +133,52 @@ class Modifiable(object):
     """
 
     @declared_attr
-    def created_at(cls):
-        return sa.Column(sa.DateTime(timezone=True), nullable=False)
+    def create_date(cls):
+        return sa.Column(sa.DateTime, nullable=False, default=datetime.now)
 
     @declared_attr
-    def created_by(cls):
-        return sa.Column(sa.Unicode, nullable=False)
-
-    @declared_attr
-    def modified_at(cls):
+    def create_user_id(cls):
         return sa.Column(
-            sa.DateTime(timezone=True),
-            sa.CheckConstraint(
-                'created_at <= modified_at',
-                'ck_%s_valid_timeline' % cls.__tablename__),
-            nullable=False)
+            sa.Integer,
+            sa.ForeignKey(
+                User.id,
+                name='fk_%s_create_user_id' % cls.__tablename__,
+                ondelete='RESTRICT'
+            ),
+            nullable=False,
+            index=True
+        )
 
     @declared_attr
-    def modified_by(cls):
-        return sa.Column(sa.Unicode, nullable=False)
+    def create_user(cls):
+        return orm.relationship(User, foreign_keys=lambda: cls.create_user_id)
+
+    @declared_attr
+    def modify_date(cls):
+        return sa.Column(
+            sa.DateTime,
+            sa.CheckConstraint(
+                'create_date <= modify_date',
+                'ck_%s_valid_timeline' % cls.__tablename__),
+            nullable=False,
+            default=datetime.now
+        )
+
+    @declared_attr
+    def modify_user_id(cls):
+        return sa.Column(
+            sa.Integer,
+            sa.ForeignKey(
+                User.id,
+                name='fk_%s_modify_user_id' % cls.__tablename__,
+                ondelete='RESTRICT'),
+            nullable=False,
+            index=True
+        )
+
+    @declared_attr
+    def modify_user(cls):
+        return orm.relationship(User, foreign_keys=lambda: cls.modify_user_id)
 
     @classmethod
     def __declare_first__(cls):

@@ -45,9 +45,9 @@
                 &bull;
                 <small class="text-muted">
                   <!--! humanize doesn't support timezones, need to use naive time for now -->
-                  ${humanize.naturaltime(patient.modified_at.replace(tzinfo=None))}
+                  ${humanize.naturaltime(patient.modify_date.replace(tzinfo=None))}
                   <span i18n:translate="">by</span>
-                  ${patient.modified_by}
+                  ${patient.modify_user.key}
                 </small>
               </li>
             </tal:patients>

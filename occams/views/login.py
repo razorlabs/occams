@@ -62,8 +62,13 @@ def login(request):
         else:
             referrer = request.GET.get('referrer')
             if not referrer or request.route_path('accounts.login') in referrer:
-                # TODO: Maybe send the user to their user dashboard instead?
-                referrer = request.route_path('occams.index')
+                referrer = request.route_path('studies.index')
+
+            dbsession = request.dbsession
+            userid = form.data['login']
+            user = dbsession.query(models.User).filter_by(key=userid).first()
+            if not user:
+                dbsession.add(models.User(key=userid))
 
             return HTTPFound(location=referrer, headers=headers)
 

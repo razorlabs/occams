@@ -13,7 +13,6 @@ branch_labels = None
 
 from alembic import op, context
 import sqlalchemy as sa
-from six import string_types
 
 
 def upgrade():

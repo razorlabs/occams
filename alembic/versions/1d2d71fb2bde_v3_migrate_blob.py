@@ -12,7 +12,7 @@ down_revision = '2eb2629708b3'
 branch_labels = None
 
 from alembic import op, context
-import six
+import io
 import sqlalchemy as sa
 
 import os
@@ -44,7 +44,7 @@ def upgrade():
         absolute_path = os.path.join(base_dir, relative_path)
         os.makedirs(os.path.dirname(absolute_path))
         with open(absolute_path, 'w+b') as fp:
-            shutil.copyfileobj(six.BytesIO(row.value), fp)
+            shutil.copyfileobj(io.BytesIO(row.value), fp)
         conn.execute(sa.text(
             """
             UPDATE value_blob

@@ -28,11 +28,6 @@
    */
   ko.bindingHandlers.datetimepicker = {
     init: function(element, valueAccessor, allBindingsAccessor) {
-
-      if (window.supportsDateInput) {
-        return;
-      }
-
       $(element).datetimepicker(ko.unwrap(valueAccessor()));
 
       ko.utils.domNodeDisposal.addDisposeCallback(element, function() {

@@ -8,9 +8,8 @@ from humanize import naturalsize
 from pyramid.i18n import get_localizer, negotiate_locale_name
 from pyramid.httpexceptions import HTTPBadRequest, HTTPFound, HTTPOk
 from pyramid.response import FileResponse
-from pyramid.session import check_csrf_token
+from pyramid.csrf import check_csrf_token
 from pyramid.view import view_config
-import six
 import transaction
 import wtforms
 
@@ -69,7 +68,7 @@ def checkout(context, request):
 
         class CheckoutForm(Form):
             contents = wtforms.SelectMultipleField(
-                choices=[(k, v.title) for k, v in six.iteritems(exportables)],
+                choices=[(k, v.title) for k, v in exportables.items()],
                 validators=[
                     wtforms.validators.InputRequired()])
             expand_collections = wtforms.BooleanField(default=False)
@@ -80,7 +79,7 @@ def checkout(context, request):
         if not form.validate():
             errors = wtferrors(form)
         else:
-            task_id = six.text_type(str(uuid.uuid4()))
+            task_id = str(uuid.uuid4())
             dbsession.add(models.Export(
                 name=task_id,
                 expand_collections=form.expand_collections.data,
@@ -263,8 +262,6 @@ def notifications(context, request):
         pubsub = request.redis.pubsub()
         pubsub.subscribe('export')
 
-        sse_payload = 'id:{0}\nevent: progress\ndata:{1}\n\n'
-
         # emit subsequent progress
         for message in pubsub.listen():
 
@@ -276,8 +273,15 @@ def notifications(context, request):
             if data['owner_user'] != request.authenticated_userid:
                 continue
 
-            log.debug(data)
-            yield sse_payload.format(str(uuid.uuid4()), json.dumps(data))
+            id = str(uuid.uuid4())
+            event = 'progress'
+            data = json.dumps(data)
+            payload = f'id:{id}\nevent: {event}\ndata:{data}\n\n'
+            log.debug(payload)
+
+            # Note: app_iter seems to only work with bytes() data
+            encoded = bytes(payload, encoding='utf-8')
+            yield encoded
 
     response = request.response
     response.content_type = 'text/event-stream'
@@ -335,16 +339,15 @@ def query_exports(request):
     """
     dbsession = request.dbsession
     userid = request.authenticated_userid
-    export_expire = request.registry.settings.get('studies.export.expire')
+    export_expire = request.registry.settings.get('studies.export.expire') or 0
 
     query = (
         dbsession.query(models.Export)
         .filter(models.Export.owner_user.has(key=userid)))
 
-    if export_expire:
+    if export_expire > 0:
         cutoff = datetime.now() - timedelta(int(export_expire))
-        query = query.filter(models.Export.modified_at >= cutoff)
+        query = query.filter(models.Export.modify_date >= cutoff)
 
     query = query.order_by(models.Export.create_date.desc())
-
     return query

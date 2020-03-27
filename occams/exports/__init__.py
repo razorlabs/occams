@@ -7,14 +7,8 @@ offer an interface (gui or cli, etc)
 
 import inspect
 
-try:
-    import unicodecsv as csv
-except ImportError:  # pragma: nocover
-    import csv
-try:
-    from ordereddict import OrderedDict
-except ImportError:  # pragma: nocover
-    from collections import OrderedDict
+import csv
+from collections import OrderedDict
 
 from pyramid.config import aslist
 from pyramid.path import DottedNameResolver

@@ -64,7 +64,7 @@ def main(global_config, **settings):
     # Built-in plugins
     config.include('pyramid_chameleon')
     config.include('pyramid_redis')
-    config.include('pyramid_redis_sessions')
+    config.include('pyramid_session_redis')
     config.include('pyramid_webassets')
     config.add_renderer('json', JSON(
         adapters=(
@@ -75,9 +75,9 @@ def main(global_config, **settings):
     )
 
     config.include('.assets')
-    config.include('.celery')
     config.include('.models')
     config.include('.routes')
+    config.include('.tasks')
     config.include('.security')
     config.scan()
 

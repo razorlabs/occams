@@ -7,8 +7,8 @@
 # * Starts celery workers
 #
 
-CONFIG_FILE=develop.ini
-
+CONFIG=${CONFIG:-develop.ini}
+LOGLEVEL=${LOGLEVEL:-INFO}
 
 if [[ ! $(alembic current &>/dev/null) ]]; then
 
@@ -17,4 +17,4 @@ if [[ ! $(alembic current &>/dev/null) ]]; then
 
 fi
 
-celery worker --app occams --loglevel INFO --without-gossip --ini $CONFIG_FILE
+C_FORCE_ROOT=1 celery worker -E -A occams.tasks --loglevel ${LOGLEVEL} --ini ${CONFIG}

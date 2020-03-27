@@ -1,6 +1,3 @@
-#python 3 compatability
-import six
-
 from datetime import datetime
 
 # for future wtforms validation
@@ -11,7 +8,7 @@ import wtforms.fields.html5
 #pyramid imports
 from pyramid.httpexceptions import \
     HTTPBadRequest, HTTPFound, HTTPForbidden, HTTPOk
-from pyramid.session import check_csrf_token
+from pyramid.csrf import check_csrf_token
 from pyramid.view import view_config
 from pyramid.response import Response
 from pyramid.renderers import render
@@ -22,7 +19,7 @@ from sqlalchemy import orm
 
 #OCCAMS imports
 from .. utils.forms import wtferrors, ModelField, Form
-from .. import models as datastore
+from .. import models
 
 from .. renderers import \
     make_form, render_form, entity_data, \
@@ -65,24 +62,24 @@ def search_view(context, request):
         )
         if (access_code == survey_check.access_code):
             schema = (
-                db_session.query(datastore.Entity)
+                db_session.query(models.Entity)
                 .filter_by(id=survey_check.entity_id)
                 .one()
             )
 
             schema_id = schema.schema_id
             schema_name_query = (
-                db_session.query(datastore.Schema)
+                db_session.query(models.Schema)
                 .filter_by(id=schema_id)
                 .one()
             )
 
             allowed_schemata = (
-                db_session.query(datastore.Schema)
+                db_session.query(models.Schema)
                 .join(models.study_schema_table)
                 .join(models.Study)
                 .join(models.Cycle)
-                .filter(datastore.Schema.name == schema_name_query.name)
+                .filter(models.Schema.name == schema_name_query.name)
                 #.filter(models.Cycle.id.in_([cycle.id for cycle in visit.cycles]))
                 )
             allowed_versions = [s.publish_date for s in allowed_schemata]

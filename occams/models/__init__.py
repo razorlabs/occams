@@ -1,4 +1,6 @@
-import six
+import decimal
+import datetime
+import json
 from sqlalchemy import engine_from_config, text
 from sqlalchemy.orm import sessionmaker, configure_mappers
 import zope.sqlalchemy
@@ -70,8 +72,21 @@ from .storage import (  # noqa
 configure_mappers()
 
 
+def serialize_type(value):
+    if isinstance(value, (datetime.date, datetime.datetime)):
+        return value.isoformat()
+    elif isinstance(value, decimal.Decimal):
+        return str(value)
+    else:
+        return value
+
+
 def get_engine(settings, prefix='sqlalchemy.'):
-    return engine_from_config(settings, prefix)
+    return engine_from_config(
+        settings,
+        prefix,
+        json_serializer=lambda obj: json.dumps(obj, default=serialize_type)
+    )
 
 
 def get_session_factory(engine):
@@ -115,7 +130,7 @@ def get_blame_from_url(url):
     Extracts the username@hostname from the connection URI or string
     """
 
-    if isinstance(url, six.string_types):
+    if isinstance(url, str):
         url = make_url(url)
 
     user = url.username

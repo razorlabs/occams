@@ -9,7 +9,6 @@ Also incorporates:
 """
 
 from datetime import datetime
-from six import itervalues
 from sqlalchemy import orm, null, cast, String, literal_column
 
 
@@ -150,16 +149,16 @@ class SchemaPlan(ExportPlan):
                       order=attribute.order,
                       is_private=attribute.is_private,
                       choices=[(c.name, c.title)
-                               for c in itervalues(attribute.choices)])
+                               for c in attribute.choices.values()])
 
         footer = [
-            row('created_at', self.name, types.DATE,
+            row('create_date', self.name, types.DATE,
                 is_required=True, is_system=True),
-            row('created_by', self.name, types.STRING,
+            row('create_user', self.name, types.STRING,
                 is_required=True, is_system=True),
-            row('modified_at', self.name, types.DATE,
+            row('modify_date', self.name, types.DATE,
                 is_required=True, is_system=True),
-            row('modified_by', self.name, types.STRING, is_required=True,
+            row('modify_user', self.name, types.STRING, is_required=True,
                 is_system=True)]
 
         for column in footer:
@@ -185,7 +184,7 @@ class SchemaPlan(ExportPlan):
 
         query = (
             session.query(report.c.id.label('id'))
-            .add_column(
+            .add_columns(
                 session.query(models.Patient.pid)
                 .join(models.Context,
                       (models.Context.external == u'patient')
@@ -194,7 +193,7 @@ class SchemaPlan(ExportPlan):
                 .correlate(report)
                 .as_scalar()
                 .label('pid'))
-            .add_column(
+            .add_columns(
                 session.query(models.Site.name)
                 .select_from(models.Patient)
                 .join(models.Site)
@@ -205,7 +204,7 @@ class SchemaPlan(ExportPlan):
                 .correlate(report)
                 .as_scalar()
                 .label('site'))
-            .add_column(
+            .add_columns(
                 session.query(group_concat(models.Study.name, ';'))
                 .select_from(models.Enrollment)
                 .join(models.Study)
@@ -217,7 +216,7 @@ class SchemaPlan(ExportPlan):
                 .correlate(report)
                 .as_scalar()
                 .label('enrollment'))
-            .add_column(
+            .add_columns(
                 session.query(group_concat(models.Enrollment.id, ';'))
                 .select_from(models.Enrollment)
                 .join(models.Context,
@@ -234,7 +233,7 @@ class SchemaPlan(ExportPlan):
             PartnerPatient = orm.aliased(models.Patient)
             query = (
                 query
-                .add_column(
+                .add_columns(
                     session.query(models.Partner.id)
                     .select_from(models.Partner)
                     .join(models.Context,
@@ -244,7 +243,7 @@ class SchemaPlan(ExportPlan):
                     .correlate(report)
                     .as_scalar()
                     .label('partner_id'))
-                .add_column(
+                .add_columns(
                     session.query(PartnerPatient.pid)
                     .select_from(models.Partner)
                     .join(PartnerPatient, models.Partner.enrolled_patient)
@@ -259,7 +258,7 @@ class SchemaPlan(ExportPlan):
         if self.has_rand:
             query = (
                 query
-                .add_column(
+                .add_columns(
                     session.query(models.Stratum.block_number)
                     .select_from(models.Stratum)
                     .join(models.Context,
@@ -269,7 +268,7 @@ class SchemaPlan(ExportPlan):
                     .correlate(report)
                     .as_scalar()
                     .label('block_number'))
-                .add_column(
+                .add_columns(
                     session.query(models.Stratum.randid)
                     .select_from(models.Stratum)
                     .join(models.Context,
@@ -279,7 +278,7 @@ class SchemaPlan(ExportPlan):
                     .correlate(report)
                     .as_scalar()
                     .label('randid'))
-                .add_column(
+                .add_columns(
                     session.query(models.Arm.title)
                     .select_from(models.Stratum)
                     .join(models.Context,
@@ -293,7 +292,7 @@ class SchemaPlan(ExportPlan):
 
         query = (
             query
-            .add_column(
+            .add_columns(
                 session.query(group_concat(models.Study.title
                                            + literal_column(u"'('")
                                            + cast(models.Cycle.week, String)
@@ -310,7 +309,7 @@ class SchemaPlan(ExportPlan):
                 .correlate(report)
                 .as_scalar()
                 .label('visit_cycles'))
-            .add_column(
+            .add_columns(
                 session.query(models.Visit.id)
                 .select_from(models.Visit)
                 .join(models.Context,
@@ -320,7 +319,7 @@ class SchemaPlan(ExportPlan):
                 .correlate(report)
                 .as_scalar()
                 .label('visit_id'))
-            .add_column(
+            .add_columns(
                 session.query(models.Visit.visit_date)
                 .select_from(models.Visit)
                 .join(models.Context,
@@ -344,8 +343,8 @@ def _list_schemata_info(dbsession):
 
     schemata_query = (
         dbsession.query(OuterSchema.name.label('name'))
-        .add_column(literal_column("'schema'").label('type'))
-        .add_column(
+        .add_columns(literal_column("'schema'").label('type'))
+        .add_columns(
             dbsession.query(models.Attribute)
             .filter(models.Attribute.is_private)
             .join(InnerSchema)
@@ -353,7 +352,7 @@ def _list_schemata_info(dbsession):
             .correlate(OuterSchema)
             .exists()
             .label('has_private'))
-        .add_column(
+        .add_columns(
             dbsession.query(models.Entity)
             .join(models.Entity.contexts)
             .filter(models.Context.external == 'stratum')
@@ -363,7 +362,7 @@ def _list_schemata_info(dbsession):
             .correlate(OuterSchema)
             .exists()
             .label('has_rand'))
-        .add_column(
+        .add_columns(
             dbsession.query(InnerSchema.title)
             .select_from(InnerSchema)
             .filter(InnerSchema.name == OuterSchema.name)
@@ -374,7 +373,7 @@ def _list_schemata_info(dbsession):
             .correlate(OuterSchema)
             .as_scalar()
             .label('title'))
-        .add_column(
+        .add_columns(
             dbsession.query(
                 group_concat(to_date(InnerSchema.publish_date), ';'))
             .filter(InnerSchema.name == OuterSchema.name)

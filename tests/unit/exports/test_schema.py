@@ -6,15 +6,15 @@ class TestSchemaPlan:
         Note this is not the same as de-identification)
         """
         from datetime import date
-        from occams import models as datastore
+        from occams import models
         from occams.exports.schema import SchemaPlan
 
-        schema = datastore.Schema(
+        schema = models.Schema(
             name=u'contact',
             title=u'Contact Details',
             publish_date=date.today(),
             attributes={
-                'foo': datastore.Attribute(
+                'foo': models.Attribute(
                     name='foo',
                     title=u'',
                     type='string',
@@ -36,22 +36,21 @@ class TestSchemaPlan:
         It should not include randomization data if specified.
         """
         from datetime import date, timedelta
-        from occams import models as datastore
         from occams import models
         from occams.exports.schema import SchemaPlan
 
-        schema = datastore.Schema(
+        schema = models.Schema(
             name=u'vitals',
             title=u'Vitals',
             publish_date=date.today(),
             attributes={
-                'foo': datastore.Attribute(
+                'foo': models.Attribute(
                     name='foo',
                     title=u'',
                     type='string',
                     order=0,
                 )})
-        entity = datastore.Entity(
+        entity = models.Entity(
             collect_date=date.today(),
             schema=schema)
         study = models.Study(
@@ -84,22 +83,21 @@ class TestSchemaPlan:
         It should add patient-specific metadata to the report
         """
         from datetime import date
-        from occams import models as datastore
         from occams import models
         from occams.exports.schema import SchemaPlan
 
-        schema = datastore.Schema(
+        schema = models.Schema(
             name=u'contact',
             title=u'Contact Details',
             publish_date=date.today(),
             attributes={
-                'foo': datastore.Attribute(
+                'foo': models.Attribute(
                     name='foo',
                     title=u'',
                     type='string',
                     order=0,
                 )})
-        entity = datastore.Entity(
+        entity = models.Entity(
             schema=schema,
             collect_date=date.today())
         patient = models.Patient(
@@ -128,22 +126,21 @@ class TestSchemaPlan:
         It should add enrollment-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams import models as datastore
         from occams import models
         from occams.exports.schema import SchemaPlan
 
-        schema = datastore.Schema(
+        schema = models.Schema(
             name=u'termination',
             title=u'Termination',
             publish_date=date.today(),
             attributes={
-                'foo': datastore.Attribute(
+                'foo': models.Attribute(
                     name='foo',
                     title=u'',
                     type='string',
                     order=0,
                 )})
-        entity = datastore.Entity(
+        entity = models.Entity(
             schema=schema,
             collect_date=date.today())
         patient = models.Patient(
@@ -184,22 +181,21 @@ class TestSchemaPlan:
         It should add visit-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams import models as datastore
         from occams import models
         from occams.exports.schema import SchemaPlan
 
-        schema = datastore.Schema(
+        schema = models.Schema(
             name=u'vitals',
             title=u'Vitals',
             publish_date=date.today(),
             attributes={
-                'foo': datastore.Attribute(
+                'foo': models.Attribute(
                     name='foo',
                     title=u'',
                     type='string',
                     order=0,
                 )})
-        entity = datastore.Entity(
+        entity = models.Entity(
             collect_date=date.today(),
             schema=schema)
         patient = models.Patient(
@@ -255,22 +251,21 @@ class TestSchemaPlan:
         It should add randomization-specific metadata to the report
         """
         from datetime import date, timedelta
-        from occams import models as datastore
         from occams import models
         from occams.exports.schema import SchemaPlan
 
-        schema = datastore.Schema(
+        schema = models.Schema(
             name=u'vitals',
             title=u'Vitals',
             publish_date=date.today(),
             attributes={
-                'foo': datastore.Attribute(
+                'foo': models.Attribute(
                     name='foo',
                     title=u'',
                     type='string',
                     order=0,
                 )})
-        entity = datastore.Entity(
+        entity = models.Entity(
             collect_date=date.today(),
             schema=schema)
         patient = models.Patient(

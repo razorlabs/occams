@@ -1,6 +1,6 @@
 import sqlalchemy as sa
 from pyramid.httpexceptions import HTTPOk, HTTPBadRequest
-from pyramid.session import check_csrf_token
+from pyramid.csrf import check_csrf_token
 from pyramid.view import view_config
 import wtforms
 

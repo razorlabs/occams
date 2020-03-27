@@ -7,20 +7,11 @@ class TestPermissionsCyclesAdd:
     url = '/studies/{}/cycles'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, dbsession):
-
-        import transaction
+    def populate(self, request, app, using_dbsession):
         from occams import models
         from datetime import date
 
-        # Any view-dependent data goes here
-        # Webtests will use a different scope for its transaction
-        with transaction.manager:
-            user = models.User(key=USERID)
-            dbsession.info['blame'] = user
-            dbsession.add(user)
-            dbsession.flush()
-
+        with using_dbsession(app) as dbsession:
             site = models.Site(
                 name=u'UCSD',
                 title=u'UCSD',
@@ -47,16 +38,16 @@ class TestPermissionsCyclesAdd:
             dbsession.add(patient)
 
     @pytest.mark.parametrize('group', ['administrator', 'manager'])
-    def test_allowed(self, app, group):
+    def test_allowed(self, testapp, group):
         environ = make_environ(userid=USERID, groups=[group])
-        csrf_token = get_csrf_token(app, environ)
+        csrf_token = get_csrf_token(testapp, environ)
 
         data = {
             'title': 'test_study Week 1',
             'week': '1'
         }
 
-        res = app.post_json(
+        res = testapp.post_json(
             self.url.format('test_study'),
             extra_environ=environ,
             status='*',
@@ -71,16 +62,16 @@ class TestPermissionsCyclesAdd:
     @pytest.mark.parametrize('group', [
         'UCSD:enterer', 'UCSD:coordinator', 'UCSD:reviewer',
         'UCSD:consumer', 'UCSD:member', None])
-    def test_not_allowed(self, app, group):
+    def test_not_allowed(self, testapp, group):
         environ = make_environ(userid=USERID, groups=[group])
-        csrf_token = get_csrf_token(app, environ)
+        csrf_token = get_csrf_token(testapp, environ)
 
         data = {
             'title': 'test_study Week 1',
             'week': '1'
         }
 
-        res = app.post_json(
+        res = testapp.post_json(
             self.url.format('test_study'),
             extra_environ=environ,
             status='*',
@@ -92,8 +83,8 @@ class TestPermissionsCyclesAdd:
 
         assert 403 == res.status_code
 
-    def test_not_authenticated(self, app):
-        app.post(self.url.format('test_study'), status=401, xhr=True)
+    def test_not_authenticated(self, testapp):
+        testapp.post(self.url.format('test_study'), status=401, xhr=True)
 
 
 class TestPermissionsCyclesDelete:
@@ -101,20 +92,11 @@ class TestPermissionsCyclesDelete:
     url = '/studies/test_study/cycles/TestDelete'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, dbsession):
-
-        import transaction
+    def populate(self, app, using_dbsession):
         from occams import models
         from datetime import date
 
-        # Any view-dependent data goes here
-        # Webtests will use a different scope for its transaction
-        with transaction.manager:
-            user = models.User(key=USERID)
-            dbsession.info['blame'] = user
-            dbsession.add(user)
-            dbsession.flush()
-
+        with using_dbsession(app) as dbsession:
             site = models.Site(
                 name=u'UCSD',
                 title=u'UCSD',
@@ -149,11 +131,11 @@ class TestPermissionsCyclesDelete:
             dbsession.add(cycle)
 
     @pytest.mark.parametrize('group', ['administrator', 'manager'])
-    def test_allowed(self, app, group):
+    def test_allowed(self, testapp, group):
         environ = make_environ(userid=USERID, groups=[group])
-        csrf_token = get_csrf_token(app, environ)
+        csrf_token = get_csrf_token(testapp, environ)
 
-        res = app.delete(
+        res = testapp.delete(
             self.url,
             extra_environ=environ,
             status='*',
@@ -169,11 +151,11 @@ class TestPermissionsCyclesDelete:
     @pytest.mark.parametrize('group', [
         'UCSD:coordinator', 'UCSD:enterer', 'UCSD:reviewer',
         'UCSD:consumer', 'UCSD:member', None])
-    def test_not_allowed(self, app, group):
+    def test_not_allowed(self, testapp, group):
         environ = make_environ(userid=USERID, groups=[group])
-        csrf_token = get_csrf_token(app, environ)
+        csrf_token = get_csrf_token(testapp, environ)
 
-        res = app.delete(
+        res = testapp.delete(
             self.url,
             extra_environ=environ,
             status='*',
@@ -186,8 +168,8 @@ class TestPermissionsCyclesDelete:
 
         assert 403 == res.status_code
 
-    def test_not_authenticated(self, app):
-        app.delete(self.url, status=401, xhr=True)
+    def test_not_authenticated(self, testapp):
+        testapp.delete(self.url, status=401, xhr=True)
 
 
 class TestPermissionsCyclesEdit:
@@ -195,20 +177,11 @@ class TestPermissionsCyclesEdit:
     url = '/studies/test_study/cycles/TestDelete'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, dbsession):
-
-        import transaction
+    def populate(self, app, using_dbsession):
         from occams import models
         from datetime import date
 
-        # Any view-dependent data goes here
-        # Webtests will use a different scope for its transaction
-        with transaction.manager:
-            user = models.User(key=USERID)
-            dbsession.info['blame'] = user
-            dbsession.add(user)
-            dbsession.flush()
-
+        with using_dbsession(app) as dbsession:
             site = models.Site(
                 name=u'UCSD',
                 title=u'UCSD',
@@ -243,9 +216,9 @@ class TestPermissionsCyclesEdit:
             dbsession.add(cycle)
 
     @pytest.mark.parametrize('group', ['administrator', 'manager'])
-    def test_allowed(self, app, group):
+    def test_allowed(self, testapp, group):
         environ = make_environ(userid=USERID, groups=[group])
-        csrf_token = get_csrf_token(app, environ)
+        csrf_token = get_csrf_token(testapp, environ)
 
         data = {
             'name': 'TestDelete',
@@ -253,7 +226,7 @@ class TestPermissionsCyclesEdit:
             'week': 4
         }
 
-        res = app.put_json(
+        res = testapp.put_json(
             self.url,
             extra_environ=environ,
             status='*',
@@ -268,9 +241,9 @@ class TestPermissionsCyclesEdit:
     @pytest.mark.parametrize('group', [
         'UCSD:coordinator', 'UCSD:enterer', 'UCSD:reviewer',
         'UCSD:consumer', 'UCSD:member', None])
-    def test_not_allowed(self, app, group):
+    def test_not_allowed(self, testapp, group):
         environ = make_environ(userid=USERID, groups=[group])
-        csrf_token = get_csrf_token(app, environ)
+        csrf_token = get_csrf_token(testapp, environ)
 
         data = {
             'name': 'TestDelete',
@@ -278,7 +251,7 @@ class TestPermissionsCyclesEdit:
             'week': 4
         }
 
-        res = app.put_json(
+        res = testapp.put_json(
             self.url,
             extra_environ=environ,
             status='*',
@@ -290,8 +263,8 @@ class TestPermissionsCyclesEdit:
 
         assert 403 == res.status_code
 
-    def test_not_authenticated(self, app):
-        app.put(self.url, status=401, xhr=True)
+    def test_not_authenticated(self, testapp):
+        testapp.put(self.url, status=401, xhr=True)
 
 
 class TestPermissionsCyclesView:
@@ -299,20 +272,11 @@ class TestPermissionsCyclesView:
     url = '/studies/test_study/cycles/TestView'
 
     @pytest.fixture(autouse=True)
-    def populate(self, app, dbsession):
-
-        import transaction
+    def populate(self, app, using_dbsession):
         from occams import models
         from datetime import date
 
-        # Any view-dependent data goes here
-        # Webtests will use a different scope for its transaction
-        with transaction.manager:
-            user = models.User(key=USERID)
-            dbsession.info['blame'] = user
-            dbsession.add(user)
-            dbsession.flush()
-
+        with using_dbsession(app) as dbsession:
             site = models.Site(
                 name=u'UCSD',
                 title=u'UCSD',
@@ -349,11 +313,11 @@ class TestPermissionsCyclesView:
     @pytest.mark.parametrize('group', [
         'administrator', 'manager', 'coordinator', 'enterer',
         'reviewer', 'consumer', 'member'])
-    def test_allowed(self, app, group):
+    def test_allowed(self, testapp, group):
         environ = make_environ(userid=USERID, groups=[group])
-        csrf_token = get_csrf_token(app, environ)
+        csrf_token = get_csrf_token(testapp, environ)
 
-        res = app.get(
+        res = testapp.get(
             self.url,
             extra_environ=environ,
             status='*',
@@ -366,5 +330,5 @@ class TestPermissionsCyclesView:
 
         assert 200 == res.status_code
 
-    def test_not_authenticated(self, app):
-        app.get(self.url, status=401, xhr=True)
+    def test_not_authenticated(self, testapp):
+        testapp.get(self.url, status=401, xhr=True)
