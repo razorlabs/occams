@@ -36,8 +36,10 @@
     onfocusout: function(element, event){
       // validate, but wait half a moment otherwise we might interrupt
       // something else the user intended on clicking on, such as cancel
+      // https://stackoverflow.com/a/25797083
       var delay = 100; // just barely enough to click on something else
-      window.setTimeout(function(){$(element).valid();}, delay);
+      var callValidate = (function(){ this.element(element); }).bind(this);
+      window.setTimeout(callValidate, delay);
     },
     highlight: function(element, errorClass, validClass){
       $(element)

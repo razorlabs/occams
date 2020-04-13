@@ -4,7 +4,6 @@ General form input utilities
 Most of these utilities are to address short-comings of wtforms.
 """
 
-import six
 import wtforms
 
 
@@ -40,7 +39,7 @@ def apply_changes(form, obj):
     flushes if the record has actually changed.
     """
     updated = []
-    for name, field in six.iteritems(form._fields):
+    for name, field in form._fields.items():
         if hasattr(obj, name) and getattr(obj, name) != field.data:
             setattr(obj, name, field.data)
             updated.append(name)
@@ -66,7 +65,7 @@ def wtferrors(form):
                     inspect_field(entry)
 
             # Only extract field-level messages (ignore sub-field errors)
-            msgs = [e for e in field.errors if isinstance(e, six.string_types)]
+            msgs = [e for e in field.errors if isinstance(e, str)]
 
             if msgs:
                 errors[field.id] = ' '.join(msgs)
@@ -94,7 +93,7 @@ class ModelField(wtforms.Field):
         super(ModelField, self).__init__(*args, **kwargs)
 
     def _value(self):
-        return six.text_type(self.data.id) if self.data else u''
+        return str(self.data.id) if self.data else u''
 
     def process_formdata(self, valuelist):
         self.data = None
@@ -110,7 +109,7 @@ class ModelField(wtforms.Field):
                     self.gettext(u'Invalid value'))
             else:
                 self.data = self.dbsession.query(self.class_).get(id_)
-                if not self.data:
+                if self.data is None:
                     raise wtforms.validators.StopValidation(
                         self.gettext(u'Value not found'))
 

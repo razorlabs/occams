@@ -45,13 +45,13 @@ class PidPlan(ExportPlan):
             row('pid', name, types.STRING, is_required=True, is_system=True),
             row('site', name, types.STRING, is_required=True, is_system=True),
             row('early_id', name, types.STRING, is_system=True),
-            row('created_at', self.name, types.DATE,
+            row('create_date', self.name, types.DATE,
                 is_required=True, is_system=True),
-            row('created_by', self.name, types.STRING,
+            row('create_user', self.name, types.STRING,
                 is_required=True, is_system=True),
-            row('modified_at', self.name, types.DATE,
+            row('modify_date', self.name, types.DATE,
                 is_required=True, is_system=True),
-            row('modified_by', self.name, types.STRING, is_required=True,
+            row('modify_user', self.name, types.STRING, is_required=True,
                 is_system=True)
         ]
 
@@ -86,11 +86,11 @@ class PidPlan(ExportPlan):
         query = (
             query
             .outerjoin(subquery, subquery.c.patient_id == models.Patient.id)
-            .add_column(subquery.c.reference_number.label('early_id')))
+            .add_columns(subquery.c.reference_number.label('early_id')))
 
         # Add every known reference number
         for reftype in self.reftypes:
-            query = query.add_column(
+            query = query.add_columns(
                 session.query(
                     group_concat(
                         models.PatientReference.reference_number, ';'))
@@ -103,14 +103,18 @@ class PidPlan(ExportPlan):
                 .as_scalar()
                 .label(reftype.name))
 
+        CreateUser = aliased(models.User)
+        ModifyUser = aliased(models.User)
+
         query = (
             query
+            .join(CreateUser, models.Patient.create_user)
+            .join(ModifyUser, models.Patient.modify_user)
             .add_columns(
-                models.Patient.created_at,
-                models.Patient.created_by,
-                models.Patient.modified_at,
-                models.Patient.modified_by
-            )
+                models.Patient.create_date,
+                CreateUser.key.label('create_user'),
+                models.Patient.modify_date,
+                ModifyUser.key.label('modify_user'))
             .order_by(models.Patient.id))
 
         return query

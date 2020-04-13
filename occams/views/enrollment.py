@@ -4,7 +4,7 @@ import uuid
 from pyramid.httpexceptions import \
     HTTPBadRequest, HTTPFound, HTTPOk, HTTPNotFound
 from pyramid.renderers import render
-from pyramid.session import check_csrf_token
+from pyramid.csrf import check_csrf_token
 from pyramid.view import view_config
 import sqlalchemy as sa
 from sqlalchemy import orm
@@ -145,6 +145,7 @@ def edit_json(context, request):
     else:
         enrollment = context
 
+    enrollment.patient.modify_date = datetime.now()
     enrollment.consent_date = form.consent_date.data
     enrollment.latest_consent_date = form.latest_consent_date.data
     enrollment.reference_number = form.reference_number.data
@@ -165,6 +166,7 @@ def edit_json(context, request):
 def delete_json(context, request):
     dbsession = request.dbsession
     list(map(dbsession.delete, context.entities))
+    context.patient.modify_date = datetime.now()
     dbsession.delete(context)
     dbsession.flush()
     request.session.flash(_(u'Deleted sucessfully'))

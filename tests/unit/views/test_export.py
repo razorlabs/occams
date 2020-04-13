@@ -192,9 +192,9 @@ class TestStatusJSON:
         exports = res['exports']
         assert len(exports) == 1
 
-    def test_ignore_expired(self, req, dbsession, config):
+    def test_allow_not_expired(self, req, dbsession, config):
         """
-        It should not render expired exports.
+        It should include exports that are within the cutoff period
         """
         from datetime import datetime, timedelta
         import mock
@@ -232,9 +232,45 @@ class TestStatusJSON:
         exports = res['exports']
         assert len(exports) == 1
 
-        export.create_date = export.modify_date = \
-            now - timedelta(EXPIRE_DAYS + 1)
+    def test_ignore_expired(self, req, dbsession, config):
+        """
+        It should not render expired exports.
+        """
+        from datetime import datetime, timedelta
+        import mock
+        from occams import models
+
+        EXPIRE_DAYS = 10
+
+        req.registry.settings['studies.export.expire'] = EXPIRE_DAYS
+        req.registry.settings['studies.export.dir'] = '/tmp'
+
+        blame = models.User(key=u'joe')
+        dbsession.add(blame)
         dbsession.flush()
+        dbsession.info['blame'] = blame
+
+        export = models.Export(
+            owner_user=(
+                dbsession.query(models.User)
+                .filter_by(key='joe')
+                .one()),
+            contents=[],
+            status='pending',
+        )
+        dbsession.add(export)
+        dbsession.flush()
+
+        # Temporarily override timestamp triggers so we can set a custom date
+        # https://stackoverflow.com/a/49180843
+        dbsession.execute('SET session_replication_role = replica')
+        past_cutoff_date = datetime.now() - timedelta(EXPIRE_DAYS + 1)
+        export.create_date = export.modify_date = past_cutoff_date
+        dbsession.flush()
+        dbsession.execute('SET session_replication_role = DEFAULT')
+
+        config.testing_securitypolicy(userid='joe')
+        req.redis = mock.Mock()
         context = models.ExportFactory(req)
         export.__parent__ = context
         res = self._call_fut(context, req)
@@ -317,7 +353,7 @@ class TestNotifications:
         notifications = list(res.app_iter)
 
         assert notifications
-        assert '"export_id": 123' in notifications[0]
+        assert b'"export_id": 123' in notifications[0]
 
 
 class TestCodebookJSON:

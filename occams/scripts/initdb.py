@@ -10,6 +10,7 @@ depending on the classification of the table.
 """
 
 import argparse
+import os
 import sys
 
 from alembic.config import Config

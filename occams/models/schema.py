@@ -7,7 +7,6 @@ from datetime import datetime
 from itertools import chain
 import re
 
-from six import iterkeys, iteritems, itervalues
 import sqlalchemy as sa
 from sqlalchemy import orm
 from sqlalchemy.ext.declarative import declared_attr
@@ -156,7 +155,7 @@ class Schema(
         """
         Useful for iterating through attributes as a hierarchy
         """
-        for attribute in sorted(itervalues(self.attributes),
+        for attribute in sorted(self.attributes.values(),
                                 key=lambda a: a.order):
             if attribute.parent_attribute is None:
                 yield attribute
@@ -165,7 +164,7 @@ class Schema(
         """
         Lists all attributes flattened without their sections
         """
-        for attribute in sorted(itervalues(self.attributes),
+        for attribute in sorted(self.attributes.values(),
                                 key=lambda a: a.order):
             if attribute.type != 'section':
                 yield attribute
@@ -208,7 +207,7 @@ class Schema(
                 datetime.strptime(data['retract_date'], '%Y-%m-%d').date()
 
         if attributes:
-            for key, attribute in iteritems(attributes):
+            for key, attribute in attributes.items():
                 schema.attributes[key] = Attribute.from_json(attribute)
 
         return schema
@@ -373,7 +372,7 @@ class Attribute(
         Cascade schema setting to children (SA won't do this)
         """
         if self.type == 'section':
-            for subattribute in itervalues(self.attributes):
+            for subattribute in self.attributes.values():
                 subattribute.schema = schema
         return schema
 
@@ -390,7 +389,7 @@ class Attribute(
         """
         Useful for iterating through attributes as a hierarchy
         """
-        return iter(sorted(itervalues(self.attributes), key=lambda a: a.order))
+        return iter(sorted(self.attributes.values(), key=lambda a: a.order))
 
     def iterlist(self):
         """
@@ -407,7 +406,7 @@ class Attribute(
         Useful for iterating through attributes in order
         """
         # TODO: Maybe apply shuffling here?
-        return iter(sorted(itervalues(self.choices), key=lambda c: c.order))
+        return iter(sorted(self.choices.values(), key=lambda c: c.order))
 
     @declared_attr
     def __table_args__(cls):
@@ -477,9 +476,9 @@ class Attribute(
 
     def __deepcopy__(self, memo):
         duplicate = copy(self)
-        for choice in itervalues(self.choices):
+        for choice in self.choices.values():
             duplicate.choices[choice.name] = deepcopy(choice)
-        for attribute in itervalues(self.attributes):
+        for attribute in self.attributes.values():
             duplicate.attributes[attribute.name] = deepcopy(attribute)
         return duplicate
 
@@ -498,11 +497,11 @@ class Attribute(
         attribute = cls(**data)
 
         if attributes:
-            for key, sub in iteritems(attributes):
+            for key, sub in attributes.items():
                 attribute.attributes[key] = Attribute.from_json(sub)
 
         if choices:
-            for key, choice in iteritems(choices):
+            for key, choice in choices.items():
                 attribute.choices[key] = Choice.from_json(choice)
 
         return attribute
@@ -537,10 +536,10 @@ class Attribute(
         if deep:
             data['attributes'] = \
                 dict([(a.name, a.to_json(deep))
-                     for a in itervalues(self.attributes)])
+                     for a in self.attributes.values()])
             data['choices'] = \
                 dict([(c.name, c.to_json(deep))
-                     for c in itervalues(self.choices)])
+                     for c in self.choices.values()])
 
         return data
 
@@ -571,7 +570,7 @@ class Attribute(
             self.is_shuffled = data['is_shuffled']
 
             new_codes = set(c['name'] for c in data['choices'])
-            old_codes = list(iterkeys(self.choices))
+            old_codes = list(self.choices.keys())
 
             for code in old_codes:
                 if code not in new_codes:

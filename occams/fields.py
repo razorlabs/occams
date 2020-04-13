@@ -1,4 +1,3 @@
-import six
 import wtforms
 from wtforms.utils import unset_value
 
@@ -16,7 +15,7 @@ class FileField(wtforms.Field):
         """
         Renders the data to markup value
         """
-        return six.text_type(self.data) if self.data is not None else ''
+        return str(self.data) if self.data is not None else ''
 
     def process(self, formdata, data=unset_value):
         """

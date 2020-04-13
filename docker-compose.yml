@@ -1,5 +1,5 @@
 #
-# Development environment services
+# Exmample compose configuration
 # DO NOT USE FOR PRODUCTION
 #
 
@@ -7,7 +7,9 @@ version: "3.7"
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      target: development
     command: dockerize -wait tcp://postgres:5432 ./docker-app-entrypoint.sh
     restart: always
     ports:
@@ -21,26 +23,26 @@ services:
       - ./develop.ini:/app/develop.ini
       - ./bower.json:/app/bower.json
       - ./tests:/app/tests
-      - uploads:/files/uploads
+      - blobs:/files/blobs
       - exports:/files/exports
 
-  celery:
-    build: .
-    command: dockerize -wait tcp://postgres:5432 ./docker-celery-entrypoint.sh
+  tasks:
+    build:
+      context: .
+      target: development
+    command: dockerize -wait tcp://postgres:5432 ./docker-tasks-entrypoint.sh
     restart: always
-    environment:
-      - C_FORCE_ROOT=1
     depends_on:
       - postgres
       - redis
     volumes:
       - ./occams:/app/occams
       - ./develop.ini:/app/develop.ini
-      - uploads:/files/uploads
+      - blobs:/files/uploads
       - exports:/files/exports
 
   postgres:
-    build: https://github.com/razorlabs/pg-json-audit-trigger.git
+    build: ./postgres
     restart: always
     environment:
       - POSTGRES_USER=occams
@@ -51,13 +53,14 @@ services:
     volumes:
       - postgres:/var/lib/postgresql/data/
 
-  postgres-tests:
-    build: https://github.com/razorlabs/pg-json-audit-trigger.git
+  postgres-test:
+    build: ./postgres
     restart: always
     environment:
       - POSTGRES_USER=test
       - POSTGRES_PASSWORD=test
       - POSTGRES_DB=test
+    tmpfs: /var/lib/postgresql/data
     ports:
       - "6543:5432"
 
@@ -68,6 +71,6 @@ services:
       - "6379:6379"
 
 volumes:
+  blobs:
   exports:
   postgres:
-  uploads:

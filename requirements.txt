@@ -1,35 +1,32 @@
 #
 # Production requirements
 #
-
-alembic==0.9.*                              # Database structure migrations
-celery[redis]==3.1.*                        # Asynchronous queue
+alembic==1.4.*                              # Database structure migrations
+celery[redis]==4.4.*                        # Asynchronous queue
 cssmin==0.2.*                               # CSS asset compression
-gevent==1.2.*                               # Enables usage of SSE on gunicorn
-gunicorn==19.7.*                            # WSGI server
-humanize==0.5.*                             # human readable units of measurement
+gevent==1.4.*                               # Enables usage of SSE on gunicorn
+gunicorn==20.0.*                            # WSGI server
+humanize==2.2.*                             # human readable units of measurement
 jsmin==2.2.*                                # Javascript asset copression
-ldap3==1.*
-psycopg2==2.7.*                             # PostgreSQL database driver
-python-dateutil==2.*                        # Better fuzzy date parsing
+ldap3==2.4.*
+psycopg2-binary==2.8.*                      # PostgreSQL database driver
+python-dateutil==2.8.*                      # Better fuzzy date parsing
 python-magic==0.4.*                         # File input validation
-python-slugify==1.*                         # Path-friendly name generator
-pyramid==1.7.*                              # Framework
-pyramid_chameleon==0.*                      # Templating
-pyramid_exclog==0.*                         # Error log messaging for production
+python-slugify==4.0.*                       # Path-friendly name generator
+pyramid==1.10.*                             # Framework
+pyramid_chameleon==0.3.*                    # Templating
+pyramid_exclog==1.*                         # Error log messaging for production
 pyramid_redis==0.1.*
-pyramid_redis_sessions==1.0.*               # Redis-based HTTP session
-pyramid_tm==1.*                             # Centralized transactions
-pyramid_webassets==0.9.*                    # Asset management and compilation
-pyramid_who==0.3.*                          # User authentication
-repoze.who==2.*
-rutter==0.*                                 # Virtual URL path proxy-passing
-six==1.*                                    # Python 2 & 3 compatibility
-SQLAlchemy>=1.3.0                           # ORM
-tabulate==0.7.*                             # ASCII tables for CLI pretty printing
-unicodecsv==0.14.* ; python_version < '3.0' # Handles unicode processing in Python 2
-who_ldap==3.2.*
-wtforms==2.*                                # Data input validation
-wtforms-components==0.10.*
-wtforms-json==0.3.*
-zope.sqlalchemy==0.7.*                      # Connects sqllachemy to pyramid_tm
+pyramid_session_redis==1.5.*                # Redis-based HTTP session
+pyramid_tm==2.4.*                           # Centralized transactions
+pyramid_webassets==0.10.*                   # Asset management and compilation
+-e git+http://github.com/m-martinez/pyramid_who.git@py3k#egg=pyramid_who # User authentication
+repoze.who==2.3.*
+rutter==0.2.*                               # Virtual URL path proxy-passing
+SQLAlchemy==1.3.*                           # ORM
+tabulate==0.8.*                             # ASCII tables for CLI pretty printing
+who_ldap==4.0.*
+WTForms==2.2.*                              # Data input validation
+WTForms-Components==0.10.*
+WTForms-JSON==0.3.*
+zope.sqlalchemy==1.3.*                      # Connects sqllachemy to pyramid_tm

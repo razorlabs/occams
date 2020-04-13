@@ -3,7 +3,7 @@ import hashlib
 from chameleon import PageTextTemplate
 from slugify import slugify
 from pyramid.httpexceptions import HTTPBadRequest, HTTPSeeOther
-from pyramid.session import check_csrf_token
+from pyramid.csrf import check_csrf_token
 from pyramid.view import view_config
 import wtforms
 

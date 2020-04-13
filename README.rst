@@ -29,8 +29,8 @@ Features
 System Requirements
 -------------------
 
-* Python 2.7+
-* npm
+* Python 3.7+
+* npm 10
     - bower
     - lessc (must be installed globally, i.e. with "-g" option)
 * redis
@@ -46,47 +46,12 @@ knowledge of how it works.
 
 .. _Docker: https://www.docker.com/
 
-VirtualBox
-++++++++++
-
-If you are using macOS or Windows, you must install Virtualbox:
-
-https://www.virtualbox.org/wiki/Downloads
-
-This is required to install boot2docker on containers.
-
-
-Machine and Compose
-+++++++++++++++++++
-
-You will neeed to install Docker Compose_ and Machine_ in order so setup
-your environment. To do so, follow the instructions the following instructions
-based on your host environment:
-
 - macOS: https://docs.docker.com/docker-for-mac/
 - Windows: https://docs.docker.com/docker-for-windows/
 - Linux:  https://docs.docker.com/engine/installation/linux/
 
-.. _Compose: https://docs.docker.com/compose/overview/
-.. _Machine: https://docs.docker.com/machine/overview/
-
-
 Installation
 ++++++++++++
-
-#. Provision a new Docker machine called "occams-develop" by running the
-   following command::
-
-      > docker-machine create -d virtualbox occams-develop
-
-#. Point Docker to the development machine::
-
-      > eval $(docker-machine env occams-develop)
-      > docker-machine ls
-      NAME             ACTIVE   DRIVER       STATE     URL                         SWARM   DOCKER    ERRORS
-      occams-develop   *        virtualbox   Running   tcp://192.168.99.100:2376           v1.12.2
-
-   Note the asterisk in the "ACTIVE" column.
 
 #. Clone the application and build the containers::
 
@@ -101,9 +66,7 @@ Installation
 
       > docker-compose up -d
 
-#. Get the IP address of the machine and use it to navigate to http://the.ip.addr.es:3000/ ::
-
-      > docker-machine ip occams-develop
+#. Navigate to http://localhost:3000/
 
 
 You now should have a working OCCAMS instance.
@@ -126,10 +89,7 @@ Create a test user and database to run the tests.
 
 ::
 
-    > psql -U occams -h `docker-machine ip occams-develop` -c "CREATE USER test"
-    > psql -U occams -h `docker-machine ip occams-develop` -c "CREATE DATABASE test OWNER test"
-    > docker-compose run app py.test --db postgresql://test@postgres/test --redis redis://redis/9
-
+    > docker-compose run --rm app pytest --db "postgresql://test:test@postgres-test/test" --redis redis://redis/9
 
 How do I check the logs?
 ''''''''''''''''''''''''
@@ -143,7 +103,7 @@ How do I access the database?
 
 Install the Postgres client on the host machine and run::
 
-  > psql -U occams -h `docker-machine ip occams-develop`
+  > psql -U occams -h localhost
 
 How do I restart the application?
 '''''''''''''''''''''''''''''''''

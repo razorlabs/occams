@@ -10,7 +10,6 @@ import sys
 import uuid
 
 from pyramid.paster import bootstrap, setup_logging
-from six import itervalues
 from tabulate import tabulate
 
 from .. import exports
@@ -111,8 +110,7 @@ def print_list(args, env):
     header = ['sys', 'priv', 'rand', 'name', 'title']
     dbsession = env['request'].dbsession
     plans = exports.plans
-    rows = iter(format(e) for e in itervalues(
-        exports.list_all(plans, dbsession)))
+    rows = iter(format(e) for e in exports.list_all(plans, dbsession).values())
     print(tabulate(rows, header, tablefmt='simple'))
 
 
@@ -140,7 +138,7 @@ def make_export(args, env):
         if not os.path.exists(args.dir):
             os.makedirs(args.dir)
 
-    for plan in itervalues(exportables):
+    for plan in exportables.values():
         if (args.all
                 or (args.all_private
                     and plan.has_private
@@ -150,14 +148,14 @@ def make_export(args, env):
                     and not plan.has_rand)
                 or (args.all_rand and plan.has_rand)
                 or (args.names and plan.name in args.names)):
-            with open(os.path.join(out_dir, plan.file_name), 'w+b') as fp:
+            with open(os.path.join(out_dir, plan.file_name), 'w') as fp:
                 exports.write_data(fp, plan.data(
                     use_choice_labels=args.use_choice_labels,
                     expand_collections=args.expand_collections,
                     ignore_private=not args.show_private))
 
-    with open(os.path.join(out_dir, exports.codebook.FILE_NAME), 'w+b') as fp:
-        codebooks = [p.codebook() for p in itervalues(exportables)]
+    with open(os.path.join(out_dir, exports.codebook.FILE_NAME), 'w') as fp:
+        codebooks = [p.codebook() for p in exportables.values()]
         exports.write_codebook(fp, chain.from_iterable(codebooks))
 
     if args.atomic:

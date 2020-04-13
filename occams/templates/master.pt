@@ -84,10 +84,10 @@
                     studies       factory(request);
                     url           request.route_path('studies.index');
                     current_study request.matchdict['study']|nothing;
-                    active        request.matched_route.name.startswith('stud');"
+                    active        request.matched_route.name == 'studies.study';"
                   tal:attributes="class python:'dropdown active' if active else 'dropdown'"
                   tal:condition="request.has_permission('view', studies)">
-                <a  href="#"
+                <a  href="${url}"
                     class="dropdown-toggle"
                     role="button"
                     data-toggle="dropdown">Studies <span class="caret"></span></a>
@@ -121,7 +121,7 @@
                   class="dropdown">
 
                 <a  id="exports-dropdown"
-                    href="#"
+                    href="${url}"
                     data-toggle="dropdown"
                     i18n:translate="">Exports <span class="caret"></span></a>
                 <ul class="dropdown-menu"

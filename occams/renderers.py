@@ -6,7 +6,7 @@ and associated plugins must be enabled.
 """
 
 from __future__ import division
-import collections
+from collections.abc import Iterable
 from decimal import Decimal
 from datetime import date, datetime
 import os
@@ -18,7 +18,6 @@ import tempfile
 import magic
 from pyramid.renderers import render
 from dateutil.parser import parse as dateutil_parse
-import six
 import sqlalchemy as sa
 from sqlalchemy.orm.attributes import flag_modified
 import wtforms
@@ -98,7 +97,7 @@ def form2json(schemata):
             'versions': list(map(version2json, groups))
         }
 
-    if isinstance(schemata, collections.Iterable):
+    if isinstance(schemata, Iterable):
         schemata = sorted(schemata, key=by_name)
         return [make_json(g) for k, g in groupby(schemata, by_name)]
     elif isinstance(schemata, models.Schema):
@@ -163,11 +162,12 @@ def make_field(attribute):
             Section, label=attribute.title, description=attribute.description)
 
     elif attribute.type == 'number':
-        if attribute.decimal_places == 0:
+        # Strict integer is set by using decimal_places to 0
+        if attribute.decimal_places is not None and attribute.decimal_places == 0:
             field_class = wtforms.fields.html5.IntegerField
         else:
             field_class = wtforms.fields.html5.DecimalField
-            if attribute.decimal_places > 0:
+            if attribute.decimal_places is not None:
                 ndigits = abs(attribute.decimal_places)
                 step = round(1 / pow(10, ndigits), ndigits)
                 kw['widget'] = wtforms.widgets.html5.NumberInput(step)
@@ -208,9 +208,6 @@ def make_field(attribute):
             label = '{choice.title}'
 
         kw['choices'] = [(c.name, label.format(choice=c)) for c in choices]
-
-        # If true, parse as string, else return none
-        kw['coerce'] = lambda v: six.binary_type(v) if v else None
 
         if attribute.is_collection:
             field_class = wtforms.SelectMultipleField
@@ -559,7 +556,7 @@ def apply_data(session, entity, data, upload_path):
     clear_data = entity.not_done or next_state == states.PENDING_ENTRY
 
     if clear_data:
-        entity.data = None
+        entity.clear()
         return entity
 
     if entity.data is None:
@@ -580,18 +577,12 @@ def apply_data(session, entity, data, upload_path):
             continue
 
         if attribute.type == 'blob':
-            # if data[attribute.name] is empty, it means field was empty
-            # Python 2.7-3.3 has a bug where FieldStorage will yield False
-            # unexpectetly, so ensure that the actual key value is an
-            # instance of FieldStorage
-
-            if isinstance(data[attribute.name], cgi.FieldStorage):
-
-                previous_attachment_id = entity.data.get(attribute.name)
-
+            # If new content is specified, remove the old file attachments
+            if attribute.name in data:
+                previous_attachment_id = entity.get(attribute.name)
                 if previous_attachment_id:
                     try:
-                        del entity.attachments[previous_attachment_id]
+                        entity.attachments.pop(previous_attachment_id)
                     except KeyError:
                         log.warn(
                             'Entity attachement (%d) is no longer available, '
@@ -600,7 +591,13 @@ def apply_data(session, entity, data, upload_path):
                         )
                     else:
                         session.flush()
+                        session.expire(entity, ['attachments'])
 
+            # if data[attribute.name] is empty, it means field was empty
+            # Python 2.7-3.3 has a bug where FieldStorage will yield False
+            # unexpectetly, so ensure that the actual key value is an
+            # instance of FieldStorage
+            if isinstance(data[attribute.name], cgi.FieldStorage):
                 original_name = os.path.basename(data[attribute.name].filename)
 
                 input_file = data[attribute.name].file
@@ -628,9 +625,9 @@ def apply_data(session, entity, data, upload_path):
                         content=output_file.read(),
                     )
                 )
-
                 session.add(attachment)
                 session.flush()
+                session.expire(entity, ['attachments'])
 
                 value = attachment.id
 
@@ -644,7 +641,7 @@ def apply_data(session, entity, data, upload_path):
                 and attribute.type in ('number', 'date', 'datetime'):
             value = str(value)
 
-        entity.data[attribute.name] = value
+        entity[attribute.name] = value
 
     flag_modified(entity, 'data')
 

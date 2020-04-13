@@ -2,13 +2,11 @@
 A utility for allowing the access of entered schema data to be represented
 in a SQL table-like fashion.
 """
-try:
-    from collections import OrderedDict
-except ImportError:  # pragma: nocover
-    from ordereddict import OrderedDict
+from collections import OrderedDict
 
-from six import itervalues, iteritems
-from sqlalchemy import orm, cast, null, literal, Integer, case, Unicode
+import sqlalchemy as sa
+from sqlalchemy import orm, cast, null, literal, Integer, case, Unicode, func
+from sqlalchemy.dialects.postgresql import ARRAY
 
 from . import models
 from .utils.sql import group_concat, to_date, to_datetime
@@ -21,7 +19,8 @@ def build_report(session,
                  expand_collections=False,
                  use_choice_labels=False,
                  context=None,
-                 ignore_private=True):
+                 ignore_private=True,
+                 delimiter=';'):
     """
     Builds a schema entity data report query table from the data dictioanry.
 
@@ -76,7 +75,7 @@ def build_report(session,
 
     attributes = None if attributes is None else set(attributes)
 
-    for column in itervalues(columns):
+    for column in columns.values():
         if column.type == 'section':  # Sections are not used in reports
             continue
 
@@ -87,85 +86,97 @@ def build_report(session,
             query = query.add_column(literal(u'[PRIVATE]').label(column.name))
             continue
 
-        # evaluate the target mapped class and casted value column
-        Value = orm.aliased(models.nameModelMap[column.type])
-        value_column = Value._value
-
-        if column.type in ('date', 'datetime'):
-            # Cast datetimes to match their attribute types
-            conv = to_date if column.type == 'date' else to_datetime
-            value_column = conv(Value._value)
-
         if column.type == 'blob':
-            value_column = case(
-                whens=[((value_column != null()), literal(u'[FILE]'))],
-                else_=null())
-
-        filter_expression = (
-            (models.Entity.id == Value.entity_id)
-            & (Value.attribute_id.in_([a.id for a in column.attributes])))
-
-        Choice = orm.aliased(models.Choice)
-
-        if column.is_collection:
-            # Collections are added via correlated sub-queries to the entity
-            if not expand_collections:
-
-                if use_choice_labels:
-                    value_column = Choice.title
-                else:
-                    value_column = Choice.name
-
-                # Not all vendors suppoar ARRAY, so we just concatenate the
-                # and let clients deal with spliting
-                value_column = (
-                    session.query(group_concat(value_column, ';'))
-                    .select_from(Value)
-                    .filter(filter_expression)
-                    .join(Choice)
-                    .group_by(Value.attribute_id)
+            Attachment = orm.aliased(models.EntityAttachment)
+            value_column = (
+                session.query(Attachment.file_name)
+                    .filter(Attachment.id == models.Entity.data[column.name].astext.cast(sa.Integer))
+                    .filter(Attachment.entity_id == models.Entity.id)
                     .correlate(models.Entity)
-                    .as_scalar())
+                    .as_scalar()
+                )
 
+        elif column.type == 'number':
+            value_column = models.Entity.data[column.name].astext.cast(sa.Numeric)
+
+        elif column.type == 'date':
+            value_column = models.Entity.data[column.name].astext.cast(sa.Date)
+
+        elif column.type == 'datetime':
+            value_column = models.Entity.data[column.name].astext.cast(sa.DateTime)
+
+        elif column.type in ('string', 'text'):
+            value_column = models.Entity.data[column.name].astext.cast(sa.Unicode)
+
+        # multiple choice
+        elif column.type == 'choice' and column.is_collection:
+            if expand_collections:
+                if use_choice_labels:
+                    # Query for the correspoinding label if is in the selection
+                    Choice = orm.aliased(models.Choice)
+                    Attribute = orm.aliased(models.Attribute)
+                    value_column = (
+                        session.query(Choice.title)
+                            .select_from(Choice)
+                            .join(Attribute)
+                            .filter(Attribute.schema_id == models.Entity.schema_id)
+                            .filter(Attribute.name == column.attribute_name)
+                            .filter(Choice.name == column.choice.name)
+                            .filter(models.Entity.data[column.attribute_name].has_key(column.choice.name))
+                            .correlate(models.Entity)
+                            .as_scalar()
+                    )
+                else:
+                    # Coerce to true/false if the selection contains the choice for this column
+                    value_column = models.Entity.data[column.attribute_name].has_key(column.choice.name).cast(sa.Integer)
             else:
-                selected_exists = (
-                    session.query(Value)
-                    .join(Choice, Value._value == Choice.id)
-                    .filter(filter_expression)
-                    .filter(Choice.name == column.choice.name)
-                    .correlate(models.Entity)
-                    .exists())
-
                 if use_choice_labels:
-                    selected_value_column = (
+                    # Replace with corresponding selected labels for the current version of the form
+                    Choice = orm.aliased(models.Choice)
+                    Attribute = orm.aliased(models.Attribute)
+                    value_column = (
+                        session.query(func.string_agg(Choice.title, literal(delimiter)))
+                            .select_from(Choice)
+                            .join(Attribute)
+                            .filter(Attribute.schema_id == models.Entity.schema_id)
+                            .filter(Attribute.name == column.attribute_name)
+                            .filter(models.Entity.data[column.name].has_key(Choice.name))
+                            .correlate(models.Entity)
+                            .as_scalar()
+                    )
+                else:
+                    # expand the json array a a listing of values
+                    selected_subquery = (
                         session.query(
-                            cast(literal(column.choice.title), Unicode))
-                        .filter(selected_exists)
-                        .as_scalar())
-                else:
-                    selected_value_column = (
-                        session.query(cast(selected_exists, Integer))
-                        .as_scalar())
+                            func.jsonb_array_elements_text(models.Entity.data[column.name]).label('selected')
+                        )
+                        .subquery()
+                    )
+                    # aggregate the elisting of values as a single delimited list
+                    value_column = (
+                        session.query(func.string_agg(selected_subquery.c.selected, literal(delimiter)))
+                        .as_scalar()
+                    )
 
-                is_selected = (
-                    session.query(Value)
-                    .filter(filter_expression)
-                    .correlate(models.Entity)
-                    .exists())
+        # single choice
+        elif column.type == 'choice' and not column.is_collection:
+            # default behavior is to use the code directly as a value
+            value_column = models.Entity.data[column.name].astext.cast(sa.Unicode)
 
-                value_column = case([(is_selected, selected_value_column)])
-
-        else:
-            # Scalar columns are added via LEFT OUTER JOIN
-            query = query.outerjoin(Value, filter_expression)
-
-            if column.type == 'choice':
+            if use_choice_labels:
+                # use a subquery to replace the code with the choice label
                 Choice = orm.aliased(models.Choice)
-                query = query.outerjoin(Choice, Value._value == Choice.id)
-                if use_choice_labels:
-                    value_column = Choice.title
-                else:
-                    value_column = Choice.name
+                Attribute = orm.aliased(models.Attribute)
+                value_column = (
+                    session.query(Choice.title)
+                        .select_from(Choice)
+                        .join(Attribute)
+                        .filter(Attribute.schema_id == models.Entity.schema_id)
+                        .filter(Attribute.name == column.name)
+                        .filter(Choice.name == value_column)
+                        .correlate(models.Entity)
+                        .as_scalar()
+                )
 
         query = query.add_column(value_column.label(column.name))
 
@@ -183,8 +194,13 @@ def build_report(session,
             ModifyUser.key.label('modify_user'))
         .order_by(models.Entity.id))
 
-    return query.cte(schema_name) \
-        if not is_sqlite else query.subquery(schema_name)
+    if is_sqlite:
+        cte = query.subquery(schema_name)
+    else:
+        cte = query.cte(schema_name)
+
+    print(cte)
+    return cte
 
 
 def build_columns(session, schema_name, ids=None, expand_collections=False):
@@ -250,7 +266,7 @@ def build_columns(session, schema_name, ids=None, expand_collections=False):
         if (expand_collections
                 and attribute.is_collection
                 and attribute.type == 'choice'):
-            for choice in itervalues(attribute.choices):
+            for choice in attribute.choices.values():
                 name = attribute.name + '_' + choice.name
                 plan.setdefault(name, []).append(attribute)
                 selected[name] = choice
@@ -258,7 +274,7 @@ def build_columns(session, schema_name, ids=None, expand_collections=False):
             plan.setdefault(attribute.name, []).append(attribute)
 
     # Build the final plan
-    for name, attributes in iteritems(plan):
+    for name, attributes in plan.items():
         columns[name] = DataColumn(name, attributes, selected.get(name))
 
     return columns
@@ -287,6 +303,7 @@ class DataColumn(object):
         assert len(types) == 1, '%s has amibigious type: %s' % (name, types)
         assert len(collections) == 1, '%s has amibiguous length' % name
         self.name = name
+        self.attribute_name = attributes[-1].name
         self.type = types.pop()
         self.is_collection = collections.pop()
         self.is_private = any(a.is_private for a in attributes)
@@ -297,4 +314,4 @@ class DataColumn(object):
         else:
             self.choices = dict((c.name, c.title)
                                 for a in attributes
-                                for c in itervalues(a.choices))
+                                for c in a.choices.values())

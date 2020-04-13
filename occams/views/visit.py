@@ -1,7 +1,7 @@
 from datetime import datetime, date
 
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPFound
-from pyramid.session import check_csrf_token
+from pyramid.csrf import check_csrf_token
 from pyramid.view import view_config
 import sqlalchemy as sa
 from sqlalchemy import orm
@@ -184,6 +184,7 @@ def edit_json(context, request):
     else:
         visit = context
 
+    visit.patient.modify_date = datetime.now()
     visit.visit_date = form.visit_date.data
 
     # Set the entire list and let sqlalchemy prune the orphans
@@ -278,6 +279,7 @@ def delete_json(context, request):
     check_csrf_token(request)
     dbsession = request.dbsession
     list(map(dbsession.delete, context.entities))
+    context.patient.modify_date = datetime.now()
     dbsession.delete(context)
     dbsession.flush()
     request.session.flash(_(

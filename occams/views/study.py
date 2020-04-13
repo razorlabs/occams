@@ -1,14 +1,11 @@
-try:
-    import unicodecsv as csv
-except ImportError:  # pragma: nocover
-    import csv
+import csv
 from datetime import date, timedelta
 
 from slugify import slugify
 from pyramid.events import subscriber, BeforeRender
 from pyramid.httpexceptions import \
     HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPOk
-from pyramid.session import check_csrf_token
+from pyramid.csrf import check_csrf_token
 from pyramid.view import view_config
 import sqlalchemy as sa
 from sqlalchemy import orm
@@ -65,7 +62,7 @@ def list_(request):
         modified_query = (
             dbsession.query(models.Patient)
             .filter(models.Patient.site.has(models.Site.id.in_(site_ids)))
-            .order_by(models.Patient.modified_at.desc())
+            .order_by(models.Patient.modify_date.desc())
             .limit(10))
 
         modified_count = modified_query.count()
@@ -874,7 +871,7 @@ def upload_randomization_json(context, request):
     # Case-insensitive lookup
     fieldnames = dict((name.upper(), name) for name in reader.fieldnames)
     stratumkeys = ['ARM', 'BLOCKID', 'RANDID']
-    formkeys = context.randomization_schema.attributes.keys()
+    formkeys = list(context.randomization_schema.attributes.keys())
 
     # Ensure the CSV defines all required columns
     required = stratumkeys + formkeys
@@ -911,17 +908,20 @@ def upload_randomization_json(context, request):
         dbsession.add(stratum)
 
         entity = models.Entity(
-            schema=context.randomization_schema, state=complete)
-
-        for key in formkeys:
-            entity[key] = row[fieldnames[key.upper()]]
+            schema=context.randomization_schema,
+            state=complete,
+            data={
+                key: row[fieldnames[key.upper()]]
+                for key in formkeys
+            }
+        )
 
         stratum.entities.add(entity)
 
     try:
         dbsession.flush()
     except sa.exc.IntegrityError as e:
-        if 'uq_stratum_reference_number' in e.message:
+        if 'uq_stratum_reference_number' in str(e):
             raise HTTPBadRequest(body=_(
                 u'The submitted file contains existing reference numbers. '
                 u'Please upload a file with new reference numbers.'))

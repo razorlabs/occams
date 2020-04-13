@@ -415,14 +415,13 @@ class Test_delete_json:
         """
 
         from datetime import date
-        from occams import models as datastore
         from occams import models
 
-        schema = datastore.Schema(
+        schema = models.Schema(
             name=u'somepatientform',
             title=u'Some Patient Form',
             publish_date=date.today())
-        entity = datastore.Entity(
+        entity = models.Entity(
             collect_date=date.today(),
             schema=schema)
         patient = models.Patient(
@@ -436,4 +435,4 @@ class Test_delete_json:
 
         self._call_fut(patient, req)
 
-        assert 0 == dbsession.query(datastore.Entity).count()
+        assert 0 == dbsession.query(models.Entity).count()

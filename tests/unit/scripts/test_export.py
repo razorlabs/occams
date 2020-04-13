@@ -1,7 +1,5 @@
 import pytest
 
-# TODO: Current broken in unit tests
-
 
 @pytest.fixture
 def plan(dbsession):
@@ -9,8 +7,8 @@ def plan(dbsession):
     from occams.exports.plan import ExportPlan
 
     class DummyPlan(ExportPlan):
-        name = u'aform'
-        title = u'A Form'
+        name = 'aform'
+        title = 'A Form'
 
         def codebook(self):
             return []
@@ -36,6 +34,11 @@ class TestPrintList:
 
         req.registry.settings['studies.export.plans'] = []
 
+        # Don't configure the logging
+        self.setup_logging_patch = mock.patch(
+            'occams.scripts.export.setup_logging',
+        ).start()
+
         # Don't configure the session since we already did that in the
         # the package setup
         self.bootstrap_patch = mock.patch(
@@ -56,10 +59,10 @@ class TestPrintList:
     def _call_fut(self, *args, **kw):
         # Override stdout so we can inspect output
         import sys
-        from six.moves import StringIO
+        import io
         from occams.scripts.export import main as cmd
         _saved_stdout = sys.stdout
-        sys.stdout = StringIO()
+        sys.stdout = io.StringIO()
         cmd(*args, **kw)
         output = sys.stdout.getvalue()
         sys.stdout = _saved_stdout

@@ -16,10 +16,10 @@ def test_state_unique_name(dbsession):
     import sqlalchemy.exc
     from occams import models
 
-    dbsession.add(models.State(name=u'a-unique-name', title='A unique name'))
+    dbsession.add(models.State(name='a-unique-name', title='A unique name'))
     dbsession.flush()
 
-    dbsession.add(models.State(name=u'a-unique-name', title='A unique name'))
+    dbsession.add(models.State(name='a-unique-name', title='A unique name'))
     with pytest.raises(sqlalchemy.exc.IntegrityError):
         dbsession.flush()
 
@@ -31,10 +31,10 @@ def test_state_entity_relationship(dbsession):
     from datetime import date
     from occams import models
 
-    schema = models.Schema(name=u'Foo', title=u'Foo',
+    schema = models.Schema(name='Foo', title='Foo',
                            publish_date=date(2000, 1, 1))
     pending_entry = \
-        dbsession.query(models.State).filter_by(name=u'pending-entry').one()
+        dbsession.query(models.State).filter_by(name='pending-entry').one()
     entity = models.Entity(schema=schema)
     dbsession.add_all([pending_entry, entity])
     dbsession.flush()
@@ -49,20 +49,6 @@ def test_state_entity_relationship(dbsession):
     assert pending_entry.entities.count() == 1
 
 
-def test_entity_add_unpublished_schema(dbsession):
-    """
-    It should not allow adding entities related to unpublished schemata
-    """
-    from occams import models
-    from occams.exc import InvalidEntitySchemaError
-
-    schema = models.Schema(name=u'Foo', title=u'')
-    entity = models.Entity(schema=schema)
-    dbsession.add(entity)
-    with pytest.raises(InvalidEntitySchemaError):
-        dbsession.flush()
-
-
 def test_entity_default_collect_date(dbsession):
     """
     It should default to today's date as the collect_date if not is provided
@@ -71,7 +57,7 @@ def test_entity_default_collect_date(dbsession):
     from occams import models
     # Make sure the system can auto-assign a collect date for the entry
 
-    schema = models.Schema(name=u'Foo', title=u'',
+    schema = models.Schema(name='Foo', title='',
                            publish_date=date(2000, 1, 1))
     entity = models.Entity(schema=schema)
     dbsession.add(entity)
@@ -93,9 +79,9 @@ def test_entity_default_collect_date(dbsession):
         Decimal('16.4'),
         Decimal('12.3'),
         [Decimal('1.5'), Decimal('12.1'), Decimal('3.0')]),
-    ('string', u'foo', u'bar', [u'foo', u'bar', u'baz']),
-    ('text', u'foo\nbar', u'foo\nbario',
-        [u'par\n1', u'par\n2', u'par\n3']),
+    ('string', 'foo', 'bar', ['foo', 'bar', 'baz']),
+    ('text', 'foo\nbar', 'foo\nbario',
+        ['par\n1', 'par\n2', 'par\n3']),
     ('date', date(2010, 3, 1), date(2010, 4, 1),
         [date(2010, 1, 1), date(2010, 2, 1), date(2010, 3, 1)]),
     ('datetime',
@@ -113,11 +99,11 @@ def check_entity_types(dbsession, type, simple, update, collection):
     from occams import models
 
     schema = models.Schema(
-        name=u'Foo', title=u'',
+        name='Foo', title='',
         publish_date=date(2000, 1, 1),
         attributes={
             's1': models.Attribute(
-                name='s1', title=u'Section 1', type='section', order=1)})
+                name='s1', title='Section 1', type='section', order=1)})
     entity = models.Entity(schema=schema)
     dbsession.add(entity)
     dbsession.flush()
@@ -132,7 +118,7 @@ def check_entity_types(dbsession, type, simple, update, collection):
     # Try null first
     schema.attributes['s1'].attributes[simpleName] = models.Attribute(
         name=simpleName,
-        title=u'', type=type, is_required=False, order=order)
+        title='', type=type, is_required=False, order=order)
     assert entity[simpleName] is None
     entity[simpleName] = None
     dbsession.flush()
@@ -166,7 +152,7 @@ def check_entity_types(dbsession, type, simple, update, collection):
     schema.attributes['s1'].attributes[collectionName] = models.Attribute(
         name=collectionName,
         schema=schema,
-        title=u'', type=type, is_collection=True, order=order)
+        title='', type=type, is_collection=True, order=order)
     entity[collectionName] = collection
     dbsession.flush()
     assert set(collection) == set(entity[collectionName])
@@ -188,36 +174,6 @@ def check_entity_types(dbsession, type, simple, update, collection):
     assert sorted([1, 1]) == sorted([v.revision for v in valueQuery])
 
 
-def test_entity_force_date(dbsession):
-    """
-    It should maintain a date object for date types.
-    (Sometimes applications will blindly assign datetimes...)
-    """
-    from datetime import date, datetime
-    from occams import models
-
-    schema = models.Schema(name=u'Foo', title=u'',
-                           publish_date=date(2000, 1, 1))
-    s1 = models.Attribute(
-        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
-    entity = models.Entity(schema=schema)
-
-    # Do simple values
-    simpleName = 'choicesimple'
-    schema.attributes[simpleName] = models.Attribute(
-        schema=schema,
-        parent_attribute=s1,
-        title=u'', type='date', is_required=False, order=1)
-
-    now = datetime.now()
-    today = now.date()
-
-    entity[simpleName] = now
-    dbsession.flush()
-    assert isinstance(entity[simpleName], date)
-    assert today == entity[simpleName]
-
-
 def test_entity_choices(dbsession):
     """
     It should properly handle choices
@@ -225,13 +181,14 @@ def test_entity_choices(dbsession):
     from datetime import date
     from occams import models
 
-    schema = models.Schema(name=u'Foo', title=u'',
+    schema = models.Schema(name='Foo', title='',
                            publish_date=date(2000, 1, 1))
     s1 = models.Attribute(
-        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
+        schema=schema, name='s1', title='Section 1', type='section', order=0)
     entity = models.Entity(schema=schema)
     dbsession.add(entity)
     dbsession.flush()
+    dbsession.refresh(schema)
 
     # Do simple values
     simpleName = 'choicesimple'
@@ -239,21 +196,23 @@ def test_entity_choices(dbsession):
         schema=schema,
         parent_attribute=s1,
         name=simpleName,
-        title=u'', type='choice', is_required=False, order=1,
+        title='', type='choice', is_required=False, order=1,
         choices={
-            '001': models.Choice(name=u'001', title=u'Foo', order=1),
-            '002': models.Choice(name=u'002', title=u'Bar', order=2),
-            '003': models.Choice(name=u'003', title=u'Baz', order=3),
-            '004': models.Choice(name=u'004', title=u'Caz', order=4),
-            '005': models.Choice(name=u'005', title=u'Jaz', order=5),
+            '001': models.Choice(name='001', title='Foo', order=1),
+            '002': models.Choice(name='002', title='Bar', order=2),
+            '003': models.Choice(name='003', title='Baz', order=3),
+            '004': models.Choice(name='004', title='Caz', order=4),
+            '005': models.Choice(name='005', title='Jaz', order=5),
             })
+    dbsession.flush()
+    dbsession.refresh(schema)
     entity[simpleName] = None
     dbsession.flush()
     assert entity[simpleName] is None
 
-    entity[simpleName] = u'002'
+    entity[simpleName] = '002'
     dbsession.flush()
-    assert u'002' == entity[simpleName]
+    assert '002' == entity[simpleName]
 
     # Now try collections
     collectionName = 'choicecollection'
@@ -261,59 +220,23 @@ def test_entity_choices(dbsession):
         schema=schema,
         parent_attribute=s1,
         name=collectionName,
-        title=u'', type='choice', is_collection=True, order=2,
+        title='', type='choice', is_collection=True, order=2,
         choices={
-            '001': models.Choice(name=u'001', title=u'Foo', order=1),
-            '002': models.Choice(name=u'002', title=u'Bar', order=2),
-            '003': models.Choice(name=u'003', title=u'Baz', order=3),
-            '004': models.Choice(name=u'004', title=u'Caz', order=4),
-            '005': models.Choice(name=u'005', title=u'Jaz', order=5)})
-    entity[collectionName] = [u'001', u'002', u'005']
+            '001': models.Choice(name='001', title='Foo', order=1),
+            '002': models.Choice(name='002', title='Bar', order=2),
+            '003': models.Choice(name='003', title='Baz', order=3),
+            '004': models.Choice(name='004', title='Caz', order=4),
+            '005': models.Choice(name='005', title='Jaz', order=5)})
     dbsession.flush()
-    assert sorted([u'001', u'002', u'005']) == \
+    dbsession.refresh(schema)
+    entity[collectionName] = ['001', '002', '005']
+    dbsession.flush()
+    assert sorted(['001', '002', '005']) == \
         sorted(entity['choicecollection'])
 
 
-def test_entity_blob_type(dbsession):
-    """
-    It should be able to keep track of file uploads (will not be storing in DB)
-    """
-
-    from occams import models
-    from datetime import date
-
-    schema = models.Schema(name='HasBlob', title=u'',
-                           publish_date=date(2000, 1, 1))
-    s1 = models.Attribute(
-        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
-    schema.attributes['theblob'] = models.Attribute(
-        parent_attribute=s1,
-        name=u'theblob', title=u'', type='blob', order=0)
-
-    entity = models.Entity(schema=schema)
-    dbsession.add(entity)
-    dbsession.flush()
-    entity_id = entity.id
-
-    # Add value
-    entity['theblob'] = models.BlobInfo(file_name=u'foo', path='bar/baz.gif')
-    dbsession.add(entity)
-    dbsession.flush()
-    entity = dbsession.query(models.Entity).get(entity_id)
-    blob = entity['theblob']
-    assert u'foo' == blob.file_name
-    assert 'bar/baz.gif' == blob.path
-
-    # Clear value
-    entity['theblob'] = None
-    dbsession.flush()
-    entity = dbsession.query(models.Entity).get(entity_id)
-    blob = entity['theblob']
-    assert blob is None
-
-
 @pytest.mark.parametrize('type_,limit,below,equal,over', [
-    ('string', 5, u'foo', u'foooo', u'foobario'),
+    ('string', 5, 'foo', 'foooo', 'foobario'),
     ('number', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
     ('date',
         time.mktime(date(2009, 5, 6).timetuple()),
@@ -334,16 +257,16 @@ def check_value_min_constraint(dbsession, type_, limit, below, equal, over):
     from occams.exc import ConstraintError
 
     schema = models.Schema(
-        name=u'Foo', title=u'', publish_date=date(2000, 1, 1))
+        name='Foo', title='', publish_date=date(2000, 1, 1))
     s1 = models.Attribute(
-        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
+        schema=schema, name='s1', title='Section 1', type='section', order=0)
     entity = models.Entity(schema=schema)
     dbsession.add(entity)
     dbsession.flush()
 
     models.Attribute(
         schema=schema, parent_attribute=s1,
-        name=type_, title=u'',
+        name=type_, title='',
         type=type_, is_required=False, value_min=limit, order=0)
 
     with pytest.raises(ConstraintError):
@@ -355,7 +278,7 @@ def check_value_min_constraint(dbsession, type_, limit, below, equal, over):
 
     models.Attribute(
         schema=schema, parent_attribute=s1,
-        name=u'boolean', title=u'', type=u'boolean', value_min=10, order=1)
+        name='boolean', title='', type='boolean', value_min=10, order=1)
 
     with pytest.raises(NotImplementedError):
         entity['boolean'] = True
@@ -363,7 +286,7 @@ def check_value_min_constraint(dbsession, type_, limit, below, equal, over):
 
 @pytest.mark.parametrize('type_,limit,below,equal,over', [
     # (type, limit, below, equal, over)
-    ('string', 5, u'foo', u'foooo', u'foobario'),
+    ('string', 5, 'foo', 'foooo', 'foobario'),
     ('number', 5, Decimal('2.0'), Decimal('5.0'), Decimal('10.0')),
     ('date',
         time.mktime(date(2009, 5, 6).timetuple()),
@@ -383,17 +306,17 @@ def check_value_max_constraint(dbsession, type_, limit, below, equal, over):
     from occams import models
     from occams.exc import ConstraintError
 
-    schema = models.Schema(name=u'Foo', title=u'',
+    schema = models.Schema(name='Foo', title='',
                            publish_date=date(2000, 1, 1))
     s1 = models.Attribute(
-        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
+        schema=schema, name='s1', title='Section 1', type='section', order=0)
     entity = models.Entity(schema=schema)
     dbsession.add(entity)
     dbsession.flush()
 
     models.Attribute(
         schema=schema, parent_attribute=s1,
-        name=type_, title=u'', type=type_, is_required=False,
+        name=type_, title='', type=type_, is_required=False,
         value_max=limit, order=0)
 
     entity[type_] = None
@@ -405,7 +328,7 @@ def check_value_max_constraint(dbsession, type_, limit, below, equal, over):
 
     models.Attribute(
         schema=schema, parent_attribute=s1,
-        name=u'boolean', title=u'', type=u'boolean', value_max=10, order=1)
+        name='boolean', title='', type='boolean', value_max=10, order=1)
     with pytest.raises(NotImplementedError):
         entity['boolean'] = True
 
@@ -418,21 +341,22 @@ def test_validator_min_constraint(dbsession):
     from occams import models
     from occams.exc import ConstraintError
 
-    schema = models.Schema(name=u'Foo', title=u'',
+    schema = models.Schema(name='Foo', title='',
                            publish_date=date(2000, 1, 1))
     s1 = models.Attribute(
-        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
+        schema=schema, name='s1', title='Section 1', type='section', order=0)
     models.Attribute(
         schema=schema,
         parent_attribute=s1,
-        name=u'test',
-        title=u'',
-        type=u'string',
+        name='test',
+        title='',
+        type='string',
         is_required=False,
         value_min=3,
         order=0)
     dbsession.add(schema)
     dbsession.flush()
+    dbsession.refresh(schema)
 
     entity = models.Entity(schema=schema)
     dbsession.add(entity)
@@ -440,9 +364,9 @@ def test_validator_min_constraint(dbsession):
     entity['test'] = None
 
     with pytest.raises(ConstraintError):
-        entity['test'] = u'f'
+        entity['test'] = 'f'
 
-    entity['test'] = u'foo'
+    entity['test'] = 'foo'
     dbsession.flush()
     assert 'foo' == entity['test']
 
@@ -455,21 +379,22 @@ def test_validator_max_constraint(dbsession):
     from occams import models
     from occams.exc import ConstraintError
 
-    schema = models.Schema(name=u'Foo', title=u'',
+    schema = models.Schema(name='Foo', title='',
                            publish_date=date(2000, 1, 1))
     s1 = models.Attribute(
-        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
+        schema=schema, name='s1', title='Section 1', type='section', order=0)
     models.Attribute(
         schema=schema,
         parent_attribute=s1,
-        name=u'test',
-        title=u'',
-        type=u'string',
+        name='test',
+        title='',
+        type='string',
         is_required=False,
         value_max=3,
         order=0)
     dbsession.add(schema)
     dbsession.flush()
+    dbsession.refresh(schema)
 
     entity = models.Entity(schema=schema)
     dbsession.add(entity)
@@ -477,9 +402,9 @@ def test_validator_max_constraint(dbsession):
     entity['test'] = None
 
     with pytest.raises(ConstraintError):
-        entity['test'] = u'foobar'
+        entity['test'] = 'foobar'
 
-    entity['test'] = u'foo'
+    entity['test'] = 'foo'
     dbsession.flush()
     assert 'foo' == entity['test']
 
@@ -492,22 +417,23 @@ def test_validator_pattern_constraint(dbsession):
     from occams import models
     from occams.exc import ConstraintError
 
-    schema = models.Schema(name=u'Foo', title=u'',
+    schema = models.Schema(name='Foo', title='',
                            publish_date=date(2000, 1, 1))
     s1 = models.Attribute(
-        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
+        schema=schema, name='s1', title='Section 1', type='section', order=0)
     models.Attribute(
         schema=schema,
         parent_attribute=s1,
-        name=u'test',
-        title=u'',
-        type=u'string',
+        name='test',
+        title='',
+        type='string',
         is_required=False,
         # Valid US phone number
         pattern=r'\d{3}-\d{3}-\d{4}',
         order=0)
     dbsession.add(schema)
     dbsession.flush()
+    dbsession.refresh(schema)
 
     entity = models.Entity(schema=schema)
     dbsession.add(entity)
@@ -515,9 +441,9 @@ def test_validator_pattern_constraint(dbsession):
     entity['test'] = None
 
     with pytest.raises(ConstraintError):
-        entity['test'] = u'trollol'
+        entity['test'] = 'trollol'
 
-    entity['test'] = u'123-456-7890'
+    entity['test'] = '123-456-7890'
     dbsession.flush()
     assert '123-456-7890' == entity['test']
 
@@ -530,35 +456,33 @@ def test_choice_constraint(dbsession):
     from occams import models
     from occams.exc import ConstraintError
 
-    schema = models.Schema(name=u'Foo', title=u'',
+    schema = models.Schema(name='Foo', title='',
                            publish_date=date(2000, 1, 1))
     s1 = models.Attribute(
-        schema=schema, name='s1', title=u'Section 1', type='section', order=0)
+        schema=schema, name='s1', title='Section 1', type='section', order=0)
     models.Attribute(
         schema=schema, parent_attribute=s1,
-        name=u'test', title=u'', type=u'choice', is_required=False, order=0,
+        name='test', title='', type='choice', is_required=False, order=0,
         choices={
-            '001': models.Choice(name=u'001', title=u'Foo', order=0),
-            '002': models.Choice(name=u'002', title=u'Bar', order=1),
-            '003': models.Choice(name=u'003', title=u'Baz', order=2)})
+            '001': models.Choice(name='001', title='Foo', order=0),
+            '002': models.Choice(name='002', title='Bar', order=1),
+            '003': models.Choice(name='003', title='Baz', order=2)})
     dbsession.add(schema)
     dbsession.flush()
+    dbsession.refresh(schema)
 
     entity = models.Entity(schema=schema)
     dbsession.add(entity)
-
-    entity['test'] = None
-    entity['test'] = u'002'
     dbsession.flush()
 
-    entry = (
-        dbsession.query(models.ValueChoice)
-        .filter(models.ValueChoice.value.has(name=u'002'))
-        .one())
-    assert entry.value.name == '002'
+    entity['test'] = None
+    entity['test'] = '002'
+    dbsession.flush()
+
+    assert entity.data['test'] == '002'
 
     # Should not be able to set it to something outside of the specified
     # choice constraints
 
     with pytest.raises(ConstraintError):
-        entity['test'] = u'999'
+        entity['test'] = '999'

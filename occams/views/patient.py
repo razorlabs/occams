@@ -3,9 +3,8 @@ from collections import OrderedDict
 from datetime import datetime
 from pyramid.httpexceptions import \
     HTTPBadRequest, HTTPFound, HTTPForbidden, HTTPOk
-from pyramid.session import check_csrf_token
+from pyramid.csrf import check_csrf_token
 from pyramid.view import view_config
-import six
 import sqlalchemy as sa
 from sqlalchemy import orm
 import wtforms
@@ -243,8 +242,8 @@ def view_json(context, request):
             }),
         } for enrollment in patient.enrollments
           for service in enrollment.study.external_services],
-        'created_at': patient.created_at.isoformat(),
-        'modified_at': patient.modified_at.isoformat()
+        'create_date': patient.create_date.isoformat(),
+        'modify_date': patient.modify_date.isoformat()
     }
 
 
@@ -426,7 +425,7 @@ def edit_json(context, request):
     if is_new:
         # if any errors occurr after this, this PID is essentially wasted
         patient = models.Patient(
-            pid=six.text_type(generate(dbsession, form.site.data.name)))
+            pid=str(generate(dbsession, form.site.data.name)))
         dbsession.add(patient)
     else:
         patient = context
@@ -446,7 +445,7 @@ def edit_json(context, request):
                 # References not in the inputs indicate they have been removed
                 dbsession.delete(r)
 
-        for r in six.itervalues(inputs):
+        for r in inputs.values():
             dbsession.add(models.PatientReference(
                 patient=patient,
                 reference_type=r['reference_type'],

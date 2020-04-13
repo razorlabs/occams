@@ -3,11 +3,11 @@ from datetime import date
 import json
 import shutil
 import tempfile
+import io
 
-import six
 from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.response import FileIter
-from pyramid.session import check_csrf_token
+from pyramid.csrf import check_csrf_token
 from pyramid.view import view_config
 import wtforms
 import wtforms.widgets.html5
@@ -58,8 +58,8 @@ def view_json(context, request):
     permission='view',
     request_param='download=json')
 def download_json(context, request):
-    fp = six.moves.cStringIO()
-    json.dump(context.to_json(deep=True), fp, indent=2)
+    fp = io.BytesIO()
+    fp.write(json.dumps(context.to_json(deep=True), indent=2).encode())
     fp.seek(0)
     response = request.response
     response.content_type = 'application/json'
@@ -93,7 +93,7 @@ def preview(context, request):
         finally:
             shutil.rmtree(upload_path)
 
-        attachments = {a.id: a for a in six.itervalues(entity.attachments)}
+        attachments = {a.id: a for a in entity.attachments.values()}
 
         # Remove from session so entity or attributes don't persist in db
         dbsession.expunge(entity)

@@ -386,7 +386,6 @@ class TestDeleteJson:
         """
         It should also remove termination forms.
         """
-        from occams import models as datastore
         from occams import models
 
         enrollment = factories.EnrollmentFactory.create()
@@ -398,7 +397,7 @@ class TestDeleteJson:
         self._call_fut(enrollment, req)
 
         assert dbsession.query(models.Enrollment).get(enrollment_id) is None
-        assert 0 == dbsession.query(datastore.Entity).count()
+        assert 0 == dbsession.query(models.Entity).count()
 
 
 class Test_terminate_ajax:
@@ -1121,7 +1120,7 @@ class Test_randomization_ajax:
         with pytest.raises(HTTPBadRequest) as excinfo:
             self._call_fut(enrollment1, req)
 
-        assert 'numbers depleted' in excinfo.value.body
+        assert 'numbers depleted' in str(excinfo.value.body)
 
     def test_restart_on_invalid_stage(
             self, req, dbsession, config, factories):

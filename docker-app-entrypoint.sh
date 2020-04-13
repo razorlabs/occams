@@ -8,7 +8,8 @@
 # * Starts gunicorn
 #
 
-CONFIG_FILE=develop.ini
+export CONFIG_FILE=${CONFIG_FILE:-develop.ini}
+export ALEMBIC_FILE=${ALEMBIC_FILE:-alembic.ini}
 
 
 if [[ ! -d "./occams/static/bower_components" ]]; then
@@ -22,9 +23,9 @@ fi
 if [[ ! $(alembic current &>/dev/null) ]]; then
 
   echo "Database has not been created yet, running initdb"
-  occams_initdb alembic.ini
+  occams_initdb ${ALEMBIC_FILE}
 
 fi
 
 
-gunicorn --no-sendfile --paster $CONFIG_FILE
+gunicorn --no-sendfile --paster ${CONFIG_FILE}

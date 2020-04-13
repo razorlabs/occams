@@ -17,16 +17,6 @@ REQUIRES = list(yield_packages(os.path.join(HERE, 'requirements.txt')))
 DEVELOP = list(yield_packages(os.path.join(HERE, 'requirements-develop.txt')))
 README = open(os.path.join(HERE, 'README.rst')).read()
 
-
-if sys.version_info < (2, 7):
-    REQUIRES.extend(['argparse', 'ordereddict'])
-    DEVELOP.append('unittest2')
-
-
-if sys.version_info < (3, 0):
-    REQUIRES.extend(['unicodecsv'])
-
-
 setup(
     name='occams',
     version='4.0.0-dev1',
