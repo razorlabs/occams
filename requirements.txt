@@ -2,7 +2,7 @@
 # Production requirements
 #
 alembic==1.4.*                              # Database structure migrations
-celery[redis]==4.4.*                        # Asynchronous queue
+celery[redis]==5.2.*                        # Asynchronous queue
 cssmin==0.2.*                               # CSS asset compression
 gevent==1.4.*                               # Enables usage of SSE on gunicorn
 gunicorn==20.0.*                            # WSGI server
