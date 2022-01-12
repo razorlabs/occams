@@ -6,7 +6,7 @@ attrs==19.3.0
 Babel==2.8.0
 beautifulsoup4==4.8.2
 billiard==3.6.3.0
-celery==4.4.2
+celery==5.2.2
 certifi==2019.11.28
 Chameleon==3.7.0
 chardet==3.0.4
