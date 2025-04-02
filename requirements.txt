@@ -5,7 +5,7 @@ alembic==1.4.*                              # Database structure migrations
 celery[redis]==5.2.*                        # Asynchronous queue
 cssmin==0.2.*                               # CSS asset compression
 gevent==23.9.1                              # Enables usage of SSE on gunicorn
-gunicorn==22.0.*                            # WSGI server
+gunicorn==23.0.*                            # WSGI server
 humanize==2.2.*                             # human readable units of measurement
 jsmin==2.2.*                                # Javascript asset copression
 ldap3==2.4.*
